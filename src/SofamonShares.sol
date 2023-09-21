@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Ownable} from "./Ownable.sol";
 import {LibString} from "./LibString.sol";
 
-// TODO: Events, final pricing model, revenue sharing
+// TODO: Events, final pricing model
 
 contract SofamonShares is Ownable {
     address public protocolFeeDestination;
@@ -197,8 +197,8 @@ contract SofamonShares is Ownable {
             amount,
             price,
             protocolFee,
-            subjectFee,
             holderFee,
+            subjectFee,
             supply + amount
         );
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
@@ -209,7 +209,6 @@ contract SofamonShares is Ownable {
         require(success1 && success2 && success3, "Unable to send funds");
     }
 
-    // TODO: distribute fees to holders
     function sellShares(
         address sharesSubject,
         uint256 shareId,
@@ -237,8 +236,8 @@ contract SofamonShares is Ownable {
             amount,
             price,
             protocolFee,
-            subjectFee,
             holderFee,
+            subjectFee,
             supply - amount
         );
         (bool success1, ) = msg.sender.call{

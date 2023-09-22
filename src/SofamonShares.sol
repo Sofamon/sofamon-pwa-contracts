@@ -16,10 +16,21 @@ contract SofamonShares is Ownable {
 
     uint256 public thresholdSupply;
 
-    event Trade(
+    event buyShare(
         address trader,
         address subject,
-        bool isBuy,
+        uint256 shareId,
+        uint256 shareAmount,
+        uint256 ethAmount,
+        uint256 protocolEthAmount,
+        uint256 subjectEthAmount,
+        uint256 holderEthAmount,
+        uint256 supply
+    );
+
+    event sellShare(
+        address trader,
+        address subject,
         uint256 shareId,
         uint256 shareAmount,
         uint256 ethAmount,
@@ -167,10 +178,9 @@ contract SofamonShares is Ownable {
             sharesBalance[sharesSubject][shareId][msg.sender] +
             amount;
         sharesSupply[sharesSubject][shareId] = supply + amount;
-        emit Trade(
+        emit buyShare(
             msg.sender,
             sharesSubject,
-            true,
             shareId,
             amount,
             price,
@@ -204,10 +214,9 @@ contract SofamonShares is Ownable {
             sharesBalance[sharesSubject][shareId][msg.sender] -
             amount;
         sharesSupply[sharesSubject][shareId] = supply - amount;
-        emit Trade(
+        emit sellShare(
             msg.sender,
             sharesSubject,
-            false,
             shareId,
             amount,
             price,

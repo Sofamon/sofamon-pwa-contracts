@@ -8,6 +8,7 @@ import {LibString} from "./LibString.sol";
 
 contract SofamonShares is Ownable {
     address public protocolFeeDestination;
+    address public holderFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
     uint256 public holderFeePercent;
@@ -23,15 +24,10 @@ contract SofamonShares is Ownable {
         uint256 shareAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
-        uint256 holderEthAmount,
         uint256 subjectEthAmount,
+        uint256 holderEthAmount,
         uint256 supply
     );
-
-    struct Holder {
-        address holderAddress;
-        uint256 shareBalance;
-    }
 
     // The supply of the current share for a specific holder
     // SharesSubject => (ID => (Holder => Balance))
@@ -41,10 +37,6 @@ contract SofamonShares is Ownable {
     // The total supply of the current share
     // SharesSubject => (ID => Supply)
     mapping(address => mapping(uint256 => uint256)) public sharesSupply;
-
-    // Mapping to store holders for each share subject
-    // SharesSubject => (ID => Holder)
-    mapping(address => mapping(uint256 => Holder[])) public shareHolders;
 
     function setURI(string memory _baseMetadataURI) public onlyOwner {
         baseMetadataURI = _baseMetadataURI;
@@ -63,6 +55,12 @@ contract SofamonShares is Ownable {
 
     function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
+    }
+
+    function setHolderFeeDestination(
+        address _holderFeeDestination
+    ) public onlyOwner {
+        holderFeeDestination = _holderFeeDestination;
     }
 
     function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
@@ -137,26 +135,6 @@ contract SofamonShares is Ownable {
         return price - protocolFee - subjectFee - holderFee;
     }
 
-    // Function to distribute the holder's fee among all holders
-    function distributeHolderFee(
-        address sharesSubject,
-        uint256 shareId,
-        uint256 holderFee
-    ) internal {
-        Holder[] storage holders = shareHolders[sharesSubject][shareId];
-        uint256 totalShares = sharesSupply[sharesSubject][shareId];
-
-        // Distribute the holder's fee proportionally to each holder
-        for (uint256 i = 0; i < holders.length; i++) {
-            uint256 feeShare = (holders[i].shareBalance * holderFee) /
-                totalShares;
-            (bool success, ) = holders[i].holderAddress.call{value: feeShare}(
-                ""
-            );
-            require(success, "Failed to distribute holder's fee");
-        }
-    }
-
     function buyShares(
         address sharesSubject,
         uint256 shareId,
@@ -197,15 +175,13 @@ contract SofamonShares is Ownable {
             amount,
             price,
             protocolFee,
-            holderFee,
             subjectFee,
+            holderFee,
             supply + amount
         );
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = sharesSubject.call{value: subjectFee}("");
-        // Distribute holder's fee among all holders
-        distributeHolderFee(sharesSubject, shareId, holderFee);
-        bool success3 = true;
+        (bool success3, ) = holderFeeDestination.call{value: holderFee}("");
         require(success1 && success2 && success3, "Unable to send funds");
     }
 
@@ -236,18 +212,16 @@ contract SofamonShares is Ownable {
             amount,
             price,
             protocolFee,
-            holderFee,
             subjectFee,
+            holderFee,
             supply - amount
         );
         (bool success1, ) = msg.sender.call{
-            value: price - protocolFee - subjectFee
+            value: price - protocolFee - subjectFee - holderFee
         }("");
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = sharesSubject.call{value: subjectFee}("");
-        // Distribute holder's fee among all holders
-        distributeHolderFee(sharesSubject, shareId, holderFee);
-        bool success4;
+        (bool success4, ) = holderFeeDestination.call{value: holderFee}("");
         require(
             success1 && success2 && success3 && success4,
             "Unable to send funds"

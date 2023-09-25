@@ -61,7 +61,12 @@ contract SofamonShares is Ownable {
             baseMetadataURI,
             LibString.toString(sharesSubject)
         );
-        return LibString.concat(baseMetadataURI_, LibString.toString(shareId));
+        string memory forwardSlash = "/";
+        return
+            LibString.concat(
+                LibString.concat(baseMetadataURI_, forwardSlash),
+                LibString.toString(shareId)
+            );
     }
 
     function setFeeDestination(address _feeDestination) public onlyOwner {

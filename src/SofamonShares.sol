@@ -2,81 +2,47 @@
 pragma solidity ^0.8.13;
 
 import {Ownable} from "./Ownable.sol";
-import {LibString} from "./LibString.sol";
-
-// TODO: Events, final pricing model
 
 contract SofamonShares is Ownable {
     address public protocolFeeDestination;
-    address public holderFeeDestination;
+    address public holderAndReferralFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
     uint256 public holderFeePercent;
-    string public baseMetadataURI;
+    uint256 public referralFeePercent;
 
-    uint256 public thresholdSupply;
-
-    event buyShare(
+    event Trade(
         address trader,
         address subject,
-        uint256 shareId,
+        bool isBuy,
         uint256 shareAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
         uint256 subjectEthAmount,
         uint256 holderEthAmount,
+        uint256 referralEthAmount,
         uint256 supply
     );
 
-    event sellShare(
-        address trader,
-        address subject,
-        uint256 shareId,
-        uint256 shareAmount,
-        uint256 ethAmount,
-        uint256 protocolEthAmount,
-        uint256 subjectEthAmount,
-        uint256 holderEthAmount,
-        uint256 supply
-    );
+    // SharesSubject => (Holder => Balance)
+    mapping(address => mapping(address => uint256)) public sharesBalance;
 
-    // The supply of the current share for a specific holder
-    // SharesSubject => (ID => (Holder => Balance))
-    mapping(address => mapping(uint256 => mapping(address => uint256)))
-        public sharesBalance;
+    // SharesSubject => Supply
+    mapping(address => uint256) public sharesSupply;
 
-    // The total supply of the current share
-    // SharesSubject => (ID => Supply)
-    mapping(address => mapping(uint256 => uint256)) public sharesSupply;
-
-    function setURI(string memory _baseMetadataURI) public onlyOwner {
-        baseMetadataURI = _baseMetadataURI;
+    constructor() Ownable() {
+        protocolFeePercent = 50000000000000000;
+        subjectFeePercent = 50000000000000000;
+        holderFeePercent = 50000000000000000;
+        referralFeePercent = 50000000000000000;
     }
 
-    function shareURI(
-        address sharesSubject,
-        uint256 shareId
-    ) public view returns (string memory) {
-        string memory baseMetadataURI_ = LibString.concat(
-            baseMetadataURI,
-            LibString.toString(sharesSubject)
-        );
-        string memory forwardSlash = "/";
-        return
-            LibString.concat(
-                LibString.concat(baseMetadataURI_, forwardSlash),
-                LibString.toString(shareId)
-            );
-    }
-
-    function setFeeDestination(address _feeDestination) public onlyOwner {
+    function setProtocolFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
     }
 
-    function setHolderFeeDestination(
-        address _holderFeeDestination
-    ) public onlyOwner {
-        holderFeeDestination = _holderFeeDestination;
+    function setHolderFeeDestination(address _feeDestination) public onlyOwner {
+        holderAndReferralFeeDestination = _feeDestination;
     }
 
     function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
@@ -91,8 +57,8 @@ contract SofamonShares is Ownable {
         holderFeePercent = _feePercent;
     }
 
-    function setThresholdSupply(uint256 _threshold) public onlyOwner {
-        thresholdSupply = _threshold;
+    function setReferralFeePercent(uint256 _feePercent) public onlyOwner {
+        referralFeePercent = _feePercent;
     }
 
     function getPrice(
@@ -113,26 +79,23 @@ contract SofamonShares is Ownable {
 
     function getBuyPrice(
         address sharesSubject,
-        uint256 shareId,
         uint256 amount
     ) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject][shareId], amount);
+        return getPrice(sharesSupply[sharesSubject], amount);
     }
 
     function getSellPrice(
         address sharesSubject,
-        uint256 shareId,
         uint256 amount
     ) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject][shareId] - amount, amount);
+        return getPrice(sharesSupply[sharesSubject] - amount, amount);
     }
 
     function getBuyPriceAfterFee(
         address sharesSubject,
-        uint256 shareId,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 price = getBuyPrice(sharesSubject, shareId, amount);
+        uint256 price = getBuyPrice(sharesSubject, amount);
         uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
         uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
         uint256 holderFee = (price * holderFeePercent) / 1 ether;
@@ -141,101 +104,92 @@ contract SofamonShares is Ownable {
 
     function getSellPriceAfterFee(
         address sharesSubject,
-        uint256 shareId,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 price = getSellPrice(sharesSubject, shareId, amount);
+        uint256 price = getSellPrice(sharesSubject, amount);
         uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
         uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
         uint256 holderFee = (price * holderFeePercent) / 1 ether;
         return price - protocolFee - subjectFee - holderFee;
     }
 
-    function buyShares(
-        address sharesSubject,
-        uint256 shareId,
-        uint256 amount
-    ) public payable {
-        uint256 supply = sharesSupply[sharesSubject][shareId];
-        uint256 count = sharesBalance[sharesSubject][shareId][msg.sender];
+    function buyShares(address sharesSubject, uint256 amount) public payable {
+        uint256 supply = sharesSupply[sharesSubject];
         require(
             supply > 0 || sharesSubject == msg.sender,
             "Only the shares' subject can buy the first share"
         );
-
-        // Check if the total supply is below the threshold, and if so, limit the user to buying 1 share
-        if (supply < thresholdSupply) {
-            require(
-                amount == 1 && count == 0,
-                "You can only buy 1 share when the supply is below the threshold, and you don't already own shares"
-            );
-        }
-
         uint256 price = getPrice(supply, amount);
         uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
         uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
         uint256 holderFee = (price * holderFeePercent) / 1 ether;
         require(
-            msg.value >= price + protocolFee + subjectFee,
+            msg.value >= price + protocolFee + subjectFee + holderFee,
             "Insufficient payment"
         );
-        sharesBalance[sharesSubject][shareId][msg.sender] =
-            sharesBalance[sharesSubject][shareId][msg.sender] +
+        sharesBalance[sharesSubject][msg.sender] =
+            sharesBalance[sharesSubject][msg.sender] +
             amount;
-        sharesSupply[sharesSubject][shareId] = supply + amount;
-        emit buyShare(
+        sharesSupply[sharesSubject] = supply + amount;
+        emit Trade(
             msg.sender,
             sharesSubject,
-            shareId,
+            true,
             amount,
             price,
             protocolFee,
             subjectFee,
             holderFee,
+            (protocolFee * referralFeePercent) / 1 ether,
             supply + amount
         );
-        (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
+        (bool success1, ) = protocolFeeDestination.call{
+            value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
+        }("");
         (bool success2, ) = sharesSubject.call{value: subjectFee}("");
-        (bool success3, ) = holderFeeDestination.call{value: holderFee}("");
+        (bool success3, ) = holderAndReferralFeeDestination.call{
+            value: holderFee + ((protocolFee * referralFeePercent) / 1 ether)
+        }("");
         require(success1 && success2 && success3, "Unable to send funds");
     }
 
-    function sellShares(
-        address sharesSubject,
-        uint256 shareId,
-        uint256 amount
-    ) public payable {
-        uint256 supply = sharesSupply[sharesSubject][shareId];
+    function sellShares(address sharesSubject, uint256 amount) public payable {
+        uint256 supply = sharesSupply[sharesSubject];
         require(supply > amount, "Cannot sell the last share");
         uint256 price = getPrice(supply - amount, amount);
         uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
         uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
-        uint256 holderFee = (price * holderFeePercent) / 1 ether;
         require(
-            sharesBalance[sharesSubject][shareId][msg.sender] >= amount,
+            sharesBalance[sharesSubject][msg.sender] >= amount,
             "Insufficient shares"
         );
-        sharesBalance[sharesSubject][shareId][msg.sender] =
-            sharesBalance[sharesSubject][shareId][msg.sender] -
+        sharesBalance[sharesSubject][msg.sender] =
+            sharesBalance[sharesSubject][msg.sender] -
             amount;
-        sharesSupply[sharesSubject][shareId] = supply - amount;
-        emit sellShare(
+        sharesSupply[sharesSubject] = supply - amount;
+        emit Trade(
             msg.sender,
             sharesSubject,
-            shareId,
+            false,
             amount,
             price,
             protocolFee,
             subjectFee,
-            holderFee,
+            0,
+            (protocolFee * referralFeePercent) / 1 ether,
             supply - amount
         );
         (bool success1, ) = msg.sender.call{
-            value: price - protocolFee - subjectFee - holderFee
+            value: price - protocolFee - subjectFee
         }("");
-        (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
+        (bool success2, ) = protocolFeeDestination.call{
+            value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
+        }("");
         (bool success3, ) = sharesSubject.call{value: subjectFee}("");
-        (bool success4, ) = holderFeeDestination.call{value: holderFee}("");
+        (bool success4, ) = holderAndReferralFeeDestination.call{
+            value: ((protocolFee * referralFeePercent) / 1 ether)
+        }("");
+
         require(
             success1 && success2 && success3 && success4,
             "Unable to send funds"

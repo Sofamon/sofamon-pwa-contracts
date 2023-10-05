@@ -5,11 +5,10 @@ import {Ownable} from "./Ownable.sol";
 
 contract SofamonShares is Ownable {
     address public protocolFeeDestination;
-    address public holderAndReferralFeeDestination;
+    address public holderFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
     uint256 public holderFeePercent;
-    uint256 public referralFeePercent;
 
     event Trade(
         address trader,
@@ -20,7 +19,6 @@ contract SofamonShares is Ownable {
         uint256 protocolEthAmount,
         uint256 subjectEthAmount,
         uint256 holderEthAmount,
-        uint256 referralEthAmount,
         uint256 supply
     );
 
@@ -51,7 +49,6 @@ contract SofamonShares is Ownable {
         protocolFeePercent = 50000000000000000;
         subjectFeePercent = 50000000000000000;
         holderFeePercent = 50000000000000000;
-        referralFeePercent = 50000000000000000;
     }
 
     function setProtocolFeeDestination(
@@ -61,7 +58,7 @@ contract SofamonShares is Ownable {
     }
 
     function setHolderFeeDestination(address _feeDestination) public onlyOwner {
-        holderAndReferralFeeDestination = _feeDestination;
+        holderFeeDestination = _feeDestination;
     }
 
     function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
@@ -74,10 +71,6 @@ contract SofamonShares is Ownable {
 
     function setHolderFeePercent(uint256 _feePercent) public onlyOwner {
         holderFeePercent = _feePercent;
-    }
-
-    function setReferralFeePercent(uint256 _feePercent) public onlyOwner {
-        referralFeePercent = _feePercent;
     }
 
     function createWearable(string memory name, string memory imageURI) public {
@@ -195,17 +188,12 @@ contract SofamonShares is Ownable {
             protocolFee,
             subjectFee,
             holderFee,
-            (protocolFee * referralFeePercent) / 1 ether,
             supply + amount
         );
 
-        (bool success1, ) = protocolFeeDestination.call{
-            value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
-        }("");
+        (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
-        (bool success3, ) = holderAndReferralFeeDestination.call{
-            value: holderFee + ((protocolFee * referralFeePercent) / 1 ether)
-        }("");
+        (bool success3, ) = holderFeeDestination.call{value: holderFee}("");
         require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
     }
 
@@ -216,6 +204,7 @@ contract SofamonShares is Ownable {
         uint256 price = getPrice(supply - amount, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
+        uint256 holderFee = getHolderFee(price);
         require(
             sharesBalance[sharesSubject][msg.sender] >= amount,
             "INSUFFICIENT_HOLDINGS"
@@ -237,20 +226,15 @@ contract SofamonShares is Ownable {
             protocolFee,
             subjectFee,
             0,
-            (protocolFee * referralFeePercent) / 1 ether,
             supply - amount
         );
 
         (bool success1, ) = msg.sender.call{
-            value: price - protocolFee - subjectFee
+            value: price - protocolFee - subjectFee - holderFee
         }("");
-        (bool success2, ) = protocolFeeDestination.call{
-            value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
-        }("");
+        (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
-        (bool success4, ) = holderAndReferralFeeDestination.call{
-            value: ((protocolFee * referralFeePercent) / 1 ether)
-        }("");
+        (bool success4, ) = holderFeeDestination.call{value: holderFee}("");
 
         require(
             success1 && success2 && success3 && success4,

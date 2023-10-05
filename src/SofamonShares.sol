@@ -13,7 +13,7 @@ contract SofamonShares is Ownable {
 
     event Trade(
         address trader,
-        address subject,
+        bytes32 subject,
         bool isBuy,
         uint256 shareAmount,
         uint256 ethAmount,
@@ -24,11 +24,27 @@ contract SofamonShares is Ownable {
         uint256 supply
     );
 
+    event WearableCreated(address creator, string imageURI);
+
+    struct Wearable {
+        address creator;
+        string imageURI;
+    }
+
+    // SharesSubject => Wearable
+    mapping(bytes32 => Wearable) public wearables;
+
+    // Holder => lastCreationTime
+    mapping(address => uint256) public lastCreationTime;
+
+    // The cooldown period between creations
+    uint256 public cooldown = 1 days;
+
     // SharesSubject => (Holder => Balance)
-    mapping(address => mapping(address => uint256)) public sharesBalance;
+    mapping(bytes32 => mapping(address => uint256)) public sharesBalance;
 
     // SharesSubject => Supply
-    mapping(address => uint256) public sharesSupply;
+    mapping(bytes32 => uint256) public sharesSupply;
 
     constructor() Ownable() {
         protocolFeePercent = 50000000000000000;
@@ -37,7 +53,9 @@ contract SofamonShares is Ownable {
         referralFeePercent = 50000000000000000;
     }
 
-    function setProtocolFeeDestination(address _feeDestination) public onlyOwner {
+    function setProtocolFeeDestination(
+        address _feeDestination
+    ) public onlyOwner {
         protocolFeeDestination = _feeDestination;
     }
 
@@ -61,6 +79,21 @@ contract SofamonShares is Ownable {
         referralFeePercent = _feePercent;
     }
 
+    function createWearable(string memory imageURI) public {
+        //TODO: check valid ipfs address
+        require(
+            block.timestamp >= lastCreationTime[msg.sender] + cooldown,
+            "WAIT_FOR_COOLDOWN"
+        );
+        bytes32 sharesSubject = keccak256(abi.encodePacked(imageURI));
+        lastCreationTime[msg.sender] = block.timestamp;
+        uint256 supply = sharesSupply[sharesSubject];
+        require(supply == 0, "ITEM_ALREADY_CREATED");
+
+        emit WearableCreated(msg.sender, imageURI);
+        _buyShares(sharesSubject, supply, 1);
+    }
+
     function getPrice(
         uint256 supply,
         uint256 amount
@@ -78,59 +111,80 @@ contract SofamonShares is Ownable {
     }
 
     function getBuyPrice(
-        address sharesSubject,
+        bytes32 sharesSubject,
         uint256 amount
     ) public view returns (uint256) {
         return getPrice(sharesSupply[sharesSubject], amount);
     }
 
     function getSellPrice(
-        address sharesSubject,
+        bytes32 sharesSubject,
         uint256 amount
     ) public view returns (uint256) {
         return getPrice(sharesSupply[sharesSubject] - amount, amount);
     }
 
     function getBuyPriceAfterFee(
-        address sharesSubject,
+        bytes32 sharesSubject,
         uint256 amount
     ) public view returns (uint256) {
         uint256 price = getBuyPrice(sharesSubject, amount);
-        uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-        uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
-        uint256 holderFee = (price * holderFeePercent) / 1 ether;
+        uint256 protocolFee = getProtocolFee(price);
+        uint256 subjectFee = getSubjectFee(price);
+        uint256 holderFee = getHolderFee(price);
         return price + protocolFee + subjectFee + holderFee;
     }
 
     function getSellPriceAfterFee(
-        address sharesSubject,
+        bytes32 sharesSubject,
         uint256 amount
     ) public view returns (uint256) {
         uint256 price = getSellPrice(sharesSubject, amount);
-        uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-        uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
-        uint256 holderFee = (price * holderFeePercent) / 1 ether;
+        uint256 protocolFee = getProtocolFee(price);
+        uint256 subjectFee = getSubjectFee(price);
+        uint256 holderFee = getHolderFee(price);
         return price - protocolFee - subjectFee - holderFee;
     }
 
-    function buyShares(address sharesSubject, uint256 amount) public payable {
+    function getProtocolFee(uint256 price) internal view returns (uint256) {
+        return (price * protocolFeePercent) / 1 ether;
+    }
+
+    function getSubjectFee(uint256 price) internal view returns (uint256) {
+        return (price * subjectFeePercent) / 1 ether;
+    }
+
+    function getHolderFee(uint256 price) internal view returns (uint256) {
+        return (price * holderFeePercent) / 1 ether;
+    }
+
+    function buyShares(bytes32 sharesSubject, uint256 amount) public payable {
         uint256 supply = sharesSupply[sharesSubject];
-        require(
-            supply > 0 || sharesSubject == msg.sender,
-            "Only the shares' subject can buy the first share"
-        );
+        require(supply > 0, "ITEM_NOT_CREATED");
+
+        _buyShares(sharesSubject, supply, amount);
+    }
+
+    function _buyShares(
+        bytes32 sharesSubject,
+        uint256 supply,
+        uint256 amount
+    ) internal {
         uint256 price = getPrice(supply, amount);
-        uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-        uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
-        uint256 holderFee = (price * holderFeePercent) / 1 ether;
+        uint256 protocolFee = getProtocolFee(price);
+        uint256 subjectFee = getSubjectFee(price);
+        uint256 holderFee = getHolderFee(price);
         require(
             msg.value >= price + protocolFee + subjectFee + holderFee,
-            "Insufficient payment"
+            "INSUFFICIENT_PAYMENT"
         );
         sharesBalance[sharesSubject][msg.sender] =
             sharesBalance[sharesSubject][msg.sender] +
             amount;
         sharesSupply[sharesSubject] = supply + amount;
+
+        address subjectFeeDestination = wearables[sharesSubject].creator;
+
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -143,30 +197,36 @@ contract SofamonShares is Ownable {
             (protocolFee * referralFeePercent) / 1 ether,
             supply + amount
         );
+
         (bool success1, ) = protocolFeeDestination.call{
             value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
         }("");
-        (bool success2, ) = sharesSubject.call{value: subjectFee}("");
+        (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
         (bool success3, ) = holderAndReferralFeeDestination.call{
             value: holderFee + ((protocolFee * referralFeePercent) / 1 ether)
         }("");
-        require(success1 && success2 && success3, "Unable to send funds");
+        require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
     }
 
-    function sellShares(address sharesSubject, uint256 amount) public payable {
+    function sellShares(bytes32 sharesSubject, uint256 amount) public payable {
         uint256 supply = sharesSupply[sharesSubject];
-        require(supply > amount, "Cannot sell the last share");
+        require(supply > amount, "CANNOT_SELL_LAST_ITEM");
+
         uint256 price = getPrice(supply - amount, amount);
-        uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
-        uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
+        uint256 protocolFee = getProtocolFee(price);
+        uint256 subjectFee = getSubjectFee(price);
         require(
             sharesBalance[sharesSubject][msg.sender] >= amount,
-            "Insufficient shares"
+            "INSUFFICIENT_HOLDINGS"
         );
+
         sharesBalance[sharesSubject][msg.sender] =
             sharesBalance[sharesSubject][msg.sender] -
             amount;
         sharesSupply[sharesSubject] = supply - amount;
+
+        address subjectFeeDestination = wearables[sharesSubject].creator;
+
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -179,20 +239,21 @@ contract SofamonShares is Ownable {
             (protocolFee * referralFeePercent) / 1 ether,
             supply - amount
         );
+
         (bool success1, ) = msg.sender.call{
             value: price - protocolFee - subjectFee
         }("");
         (bool success2, ) = protocolFeeDestination.call{
             value: protocolFee - ((protocolFee * referralFeePercent) / 1 ether)
         }("");
-        (bool success3, ) = sharesSubject.call{value: subjectFee}("");
+        (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
         (bool success4, ) = holderAndReferralFeeDestination.call{
             value: ((protocolFee * referralFeePercent) / 1 ether)
         }("");
 
         require(
             success1 && success2 && success3 && success4,
-            "Unable to send funds"
+            "UNABLE_TO_SEND_FUNDS"
         );
     }
 }

@@ -26,6 +26,7 @@ contract SofamonShares is Ownable {
         address creator,
         string name,
         string category,
+        string description,
         string imageURI
     );
 
@@ -82,9 +83,9 @@ contract SofamonShares is Ownable {
     function createWearable(
         string memory name,
         string memory category,
+        string memory description,
         string memory imageURI
     ) public {
-        //TODO: check valid ipfs address
         require(
             block.timestamp >= lastCreationTime[msg.sender] + cooldown,
             "WAIT_FOR_COOLDOWN"
@@ -93,8 +94,14 @@ contract SofamonShares is Ownable {
         lastCreationTime[msg.sender] = block.timestamp;
         uint256 supply = sharesSupply[sharesSubject];
         require(supply == 0, "ITEM_ALREADY_CREATED");
+        wearables[sharesSubject] = Wearable(
+            msg.sender,
+            name,
+            category,
+            imageURI
+        );
 
-        emit WearableCreated(msg.sender, name, category, imageURI);
+        emit WearableCreated(msg.sender, name, category, description, imageURI);
         _buyShares(sharesSubject, supply, 1);
     }
 

@@ -86,10 +86,10 @@ contract SofamonShares is Ownable {
         string memory description,
         string memory imageURI
     ) public {
-        require(
-            block.timestamp >= lastCreationTime[msg.sender] + cooldown,
-            "WAIT_FOR_COOLDOWN"
-        );
+        // require(
+        //     block.timestamp >= lastCreationTime[msg.sender] + cooldown,
+        //     "WAIT_FOR_COOLDOWN"
+        // );
         bytes32 sharesSubject = keccak256(abi.encode(name, imageURI));
         lastCreationTime[msg.sender] = block.timestamp;
         uint256 supply = sharesSupply[sharesSubject];

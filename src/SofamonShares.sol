@@ -242,7 +242,7 @@ contract SofamonShares is Ownable {
             price,
             protocolFee,
             subjectFee,
-            0,
+            holderFee,
             supply - amount
         );
 

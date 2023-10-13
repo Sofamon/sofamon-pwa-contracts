@@ -25,7 +25,7 @@ contract SofamonWearables is Ownable {
     event WearableCreated(
         address creator,
         string name,
-        string category,
+        string template,
         string description,
         string imageURI
     );
@@ -33,7 +33,7 @@ contract SofamonWearables is Ownable {
     struct Wearable {
         address creator;
         string name;
-        string category;
+        string template;
         string imageURI;
     }
 
@@ -82,7 +82,7 @@ contract SofamonWearables is Ownable {
 
     function createWearable(
         string memory name,
-        string memory category,
+        string memory template,
         string memory description,
         string memory imageURI
     ) public {
@@ -97,11 +97,11 @@ contract SofamonWearables is Ownable {
         wearables[wearablesSubject] = Wearable(
             msg.sender,
             name,
-            category,
+            template,
             imageURI
         );
 
-        emit WearableCreated(msg.sender, name, category, description, imageURI);
+        emit WearableCreated(msg.sender, name, template, description, imageURI);
         _buyWearables(wearablesSubject, supply, 1);
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Ownable} from "./Ownable.sol";
 
-contract SofamonShares is Ownable {
+contract SofamonWearables is Ownable {
     address public protocolFeeDestination;
     address public holderFeeDestination;
     uint256 public protocolFeePercent;
@@ -37,7 +37,7 @@ contract SofamonShares is Ownable {
         string imageURI;
     }
 
-    // SharesSubject => Wearable
+    // WearablesSubject => Wearable
     mapping(bytes32 => Wearable) public wearables;
 
     // Holder => lastCreationTime
@@ -46,11 +46,11 @@ contract SofamonShares is Ownable {
     // The cooldown period between creations
     uint256 public cooldown = 1 days;
 
-    // SharesSubject => (Holder => Balance)
-    mapping(bytes32 => mapping(address => uint256)) public sharesBalance;
+    // wearablesSubject => (Holder => Balance)
+    mapping(bytes32 => mapping(address => uint256)) public wearablesBalance;
 
-    // SharesSubject => Supply
-    mapping(bytes32 => uint256) public sharesSupply;
+    // wearablesSubject => Supply
+    mapping(bytes32 => uint256) public wearablesSupply;
 
     constructor() Ownable() {
         protocolFeePercent = 50000000000000000;
@@ -90,11 +90,11 @@ contract SofamonShares is Ownable {
         //     block.timestamp >= lastCreationTime[msg.sender] + cooldown,
         //     "WAIT_FOR_COOLDOWN"
         // );
-        bytes32 sharesSubject = keccak256(abi.encode(name, imageURI));
+        bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
         lastCreationTime[msg.sender] = block.timestamp;
-        uint256 supply = sharesSupply[sharesSubject];
-        require(supply == 0, "ITEM_ALREADY_CREATED");
-        wearables[sharesSubject] = Wearable(
+        uint256 supply = wearablesSupply[wearablesSubject];
+        require(supply == 0, "WEARABLE_ALREADY_CREATED");
+        wearables[wearablesSubject] = Wearable(
             msg.sender,
             name,
             category,
@@ -102,7 +102,7 @@ contract SofamonShares is Ownable {
         );
 
         emit WearableCreated(msg.sender, name, category, description, imageURI);
-        _buyShares(sharesSubject, supply, 1);
+        _buyWearables(wearablesSubject, supply, 1);
     }
 
     function getPrice(
@@ -122,24 +122,24 @@ contract SofamonShares is Ownable {
     }
 
     function getBuyPrice(
-        bytes32 sharesSubject,
+        bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject], amount);
+        return getPrice(wearablesSupply[wearablesSubject], amount);
     }
 
     function getSellPrice(
-        bytes32 sharesSubject,
+        bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        return getPrice(sharesSupply[sharesSubject] - amount, amount);
+        return getPrice(wearablesSupply[wearablesSubject] - amount, amount);
     }
 
     function getBuyPriceAfterFee(
-        bytes32 sharesSubject,
+        bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 price = getBuyPrice(sharesSubject, amount);
+        uint256 price = getBuyPrice(wearablesSubject, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
         uint256 holderFee = getHolderFee(price);
@@ -147,10 +147,10 @@ contract SofamonShares is Ownable {
     }
 
     function getSellPriceAfterFee(
-        bytes32 sharesSubject,
+        bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 price = getSellPrice(sharesSubject, amount);
+        uint256 price = getSellPrice(wearablesSubject, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
         uint256 holderFee = getHolderFee(price);
@@ -169,15 +169,15 @@ contract SofamonShares is Ownable {
         return (price * holderFeePercent) / 1 ether;
     }
 
-    function buyShares(bytes32 sharesSubject, uint256 amount) public payable {
-        uint256 supply = sharesSupply[sharesSubject];
-        require(supply > 0, "ITEM_NOT_CREATED");
+    function buyWearables(bytes32 wearablesSubject, uint256 amount) public payable {
+        uint256 supply = wearablesSupply[wearablesSubject];
+        require(supply > 0, "WEARABLE_NOT_CREATED");
 
-        _buyShares(sharesSubject, supply, amount);
+        _buyWearables(wearablesSubject, supply, amount);
     }
 
-    function _buyShares(
-        bytes32 sharesSubject,
+    function _buyWearables(
+        bytes32 wearablesSubject,
         uint256 supply,
         uint256 amount
     ) internal {
@@ -189,16 +189,16 @@ contract SofamonShares is Ownable {
             msg.value >= price + protocolFee + subjectFee + holderFee,
             "INSUFFICIENT_PAYMENT"
         );
-        sharesBalance[sharesSubject][msg.sender] =
-            sharesBalance[sharesSubject][msg.sender] +
+        wearablesBalance[wearablesSubject][msg.sender] =
+            wearablesBalance[wearablesSubject][msg.sender] +
             amount;
-        sharesSupply[sharesSubject] = supply + amount;
+        wearablesSupply[wearablesSubject] = supply + amount;
 
-        address subjectFeeDestination = wearables[sharesSubject].creator;
+        address subjectFeeDestination = wearables[wearablesSubject].creator;
 
         emit Trade(
             msg.sender,
-            sharesSubject,
+            wearablesSubject,
             true,
             amount,
             price,
@@ -214,29 +214,29 @@ contract SofamonShares is Ownable {
         require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
     }
 
-    function sellShares(bytes32 sharesSubject, uint256 amount) public payable {
-        uint256 supply = sharesSupply[sharesSubject];
-        require(supply > amount, "CANNOT_SELL_LAST_ITEM");
+    function sellWearables(bytes32 wearablesSubject, uint256 amount) public payable {
+        uint256 supply = wearablesSupply[wearablesSubject];
+        require(supply > amount, "CANNOT_SELL_LAST_WEARABLE");
 
         uint256 price = getPrice(supply - amount, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
         uint256 holderFee = getHolderFee(price);
         require(
-            sharesBalance[sharesSubject][msg.sender] >= amount,
+            wearablesBalance[wearablesSubject][msg.sender] >= amount,
             "INSUFFICIENT_HOLDINGS"
         );
 
-        sharesBalance[sharesSubject][msg.sender] =
-            sharesBalance[sharesSubject][msg.sender] -
+        wearablesBalance[wearablesSubject][msg.sender] =
+            wearablesBalance[wearablesSubject][msg.sender] -
             amount;
-        sharesSupply[sharesSubject] = supply - amount;
+        wearablesSupply[wearablesSubject] = supply - amount;
 
-        address subjectFeeDestination = wearables[sharesSubject].creator;
+        address subjectFeeDestination = wearables[wearablesSubject].creator;
 
         emit Trade(
             msg.sender,
-            sharesSubject,
+            wearablesSubject,
             false,
             amount,
             price,

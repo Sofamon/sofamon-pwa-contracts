@@ -2,11 +2,11 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../src/SofamonShares.sol";
+import "../src/SofamonWearables.sol";
 
 contract SofamonSharesTest is Test {
-    SofamonShares public shares;
+    SofamonWearables public shares;
     function setUp() public {
-       shares = new SofamonShares();
+       shares = new SofamonWearables();
     }
 }

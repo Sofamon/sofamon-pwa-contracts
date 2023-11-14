@@ -12,7 +12,7 @@ contract SofamonWearables is Ownable {
         address trader,
         bytes32 subject,
         bool isBuy,
-        uint256 shareAmount,
+        uint256 wearableAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
         uint256 subjectEthAmount,

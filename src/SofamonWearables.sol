@@ -5,10 +5,8 @@ import {Ownable} from "./Ownable.sol";
 
 contract SofamonWearables is Ownable {
     address public protocolFeeDestination;
-    address public holderFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
-    uint256 public holderFeePercent;
 
     event Trade(
         address trader,
@@ -18,7 +16,6 @@ contract SofamonWearables is Ownable {
         uint256 ethAmount,
         uint256 protocolEthAmount,
         uint256 subjectEthAmount,
-        uint256 holderEthAmount,
         uint256 supply
     );
 
@@ -55,7 +52,6 @@ contract SofamonWearables is Ownable {
     constructor() Ownable() {
         protocolFeePercent = 50000000000000000;
         subjectFeePercent = 50000000000000000;
-        holderFeePercent = 50000000000000000;
     }
 
     function setProtocolFeeDestination(
@@ -64,20 +60,12 @@ contract SofamonWearables is Ownable {
         protocolFeeDestination = _feeDestination;
     }
 
-    function setHolderFeeDestination(address _feeDestination) public onlyOwner {
-        holderFeeDestination = _feeDestination;
-    }
-
     function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
         protocolFeePercent = _feePercent;
     }
 
     function setSubjectFeePercent(uint256 _feePercent) public onlyOwner {
         subjectFeePercent = _feePercent;
-    }
-
-    function setHolderFeePercent(uint256 _feePercent) public onlyOwner {
-        holderFeePercent = _feePercent;
     }
 
     function createWearable(
@@ -142,8 +130,7 @@ contract SofamonWearables is Ownable {
         uint256 price = getBuyPrice(wearablesSubject, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
-        uint256 holderFee = getHolderFee(price);
-        return price + protocolFee + subjectFee + holderFee;
+        return price + protocolFee + subjectFee;
     }
 
     function getSellPriceAfterFee(
@@ -153,8 +140,7 @@ contract SofamonWearables is Ownable {
         uint256 price = getSellPrice(wearablesSubject, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
-        uint256 holderFee = getHolderFee(price);
-        return price - protocolFee - subjectFee - holderFee;
+        return price - protocolFee - subjectFee;
     }
 
     function getProtocolFee(uint256 price) internal view returns (uint256) {
@@ -163,10 +149,6 @@ contract SofamonWearables is Ownable {
 
     function getSubjectFee(uint256 price) internal view returns (uint256) {
         return (price * subjectFeePercent) / 1 ether;
-    }
-
-    function getHolderFee(uint256 price) internal view returns (uint256) {
-        return (price * holderFeePercent) / 1 ether;
     }
 
     function buyWearables(bytes32 wearablesSubject, uint256 amount) public payable {
@@ -184,9 +166,8 @@ contract SofamonWearables is Ownable {
         uint256 price = getPrice(supply, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
-        uint256 holderFee = getHolderFee(price);
         require(
-            msg.value >= price + protocolFee + subjectFee + holderFee,
+            msg.value >= price + protocolFee + subjectFee,
             "INSUFFICIENT_PAYMENT"
         );
         wearablesBalance[wearablesSubject][msg.sender] =
@@ -204,14 +185,12 @@ contract SofamonWearables is Ownable {
             price,
             protocolFee,
             subjectFee,
-            holderFee,
             supply + amount
         );
 
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
-        (bool success3, ) = holderFeeDestination.call{value: holderFee}("");
-        require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
+        require(success1 && success2, "UNABLE_TO_SEND_FUNDS");
     }
 
     function sellWearables(bytes32 wearablesSubject, uint256 amount) public payable {
@@ -221,7 +200,6 @@ contract SofamonWearables is Ownable {
         uint256 price = getPrice(supply - amount, amount);
         uint256 protocolFee = getProtocolFee(price);
         uint256 subjectFee = getSubjectFee(price);
-        uint256 holderFee = getHolderFee(price);
         require(
             wearablesBalance[wearablesSubject][msg.sender] >= amount,
             "INSUFFICIENT_HOLDINGS"
@@ -242,19 +220,17 @@ contract SofamonWearables is Ownable {
             price,
             protocolFee,
             subjectFee,
-            holderFee,
             supply - amount
         );
 
         (bool success1, ) = msg.sender.call{
-            value: price - protocolFee - subjectFee - holderFee
+            value: price - protocolFee - subjectFee
         }("");
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
-        (bool success4, ) = holderFeeDestination.call{value: holderFee}("");
 
         require(
-            success1 && success2 && success3 && success4,
+            success1 && success2 && success3,
             "UNABLE_TO_SEND_FUNDS"
         );
     }

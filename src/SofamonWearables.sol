@@ -2,11 +2,13 @@
 pragma solidity ^0.8.17;
 
 import {Ownable} from "./Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SofamonWearables is Ownable {
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
+    address public createSigner;
 
     event Trade(
         address trader,
@@ -46,9 +48,10 @@ contract SofamonWearables is Ownable {
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
-    constructor() Ownable() {
+    constructor(address _signer) Ownable() {
         protocolFeePercent = 50000000000000000;
         subjectFeePercent = 50000000000000000;
+        createSigner = _signer; // Set the signer's public key
     }
 
     function setProtocolFeeDestination(
@@ -57,20 +60,29 @@ contract SofamonWearables is Ownable {
         protocolFeeDestination = _feeDestination;
     }
 
-    function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
+    function setProtocolFeePercent(uint256 _feePercent) external onlyOwner {
         protocolFeePercent = _feePercent;
     }
 
-    function setSubjectFeePercent(uint256 _feePercent) public onlyOwner {
+    function setSubjectFeePercent(uint256 _feePercent) external onlyOwner {
         subjectFeePercent = _feePercent;
+    }
+
+    function setCreateSigner(address _signer) external onlyOwner {
+        createSigner = _signer;
     }
 
     function createWearable(
         string memory name,
         string memory template,
         string memory description,
-        string memory imageURI
+        string memory imageURI,
+        bytes calldata signature
     ) public {
+        // Validate signature
+        bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, template, description, imageURI));
+        require(_verifySignature(hashVal, signature), "INVALID_SIGNATURE");
+        
         bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
         lastCreationTime[msg.sender] = block.timestamp;
         uint256 supply = wearablesSupply[wearablesSubject];
@@ -84,6 +96,15 @@ contract SofamonWearables is Ownable {
 
         emit WearableCreated(msg.sender, name, template, description, imageURI);
         _buyWearables(wearablesSubject, supply, 1);
+    }
+
+    function _verifySignature(
+        bytes32 hashVal,
+        bytes calldata signature
+    ) internal view returns (bool) {
+        return
+            hashVal.toEthSignedMessageHash().recover(signature) ==
+            createSigner;
     }
 
     function getPrice(
@@ -144,7 +165,10 @@ contract SofamonWearables is Ownable {
         return (price * subjectFeePercent) / 1 ether;
     }
 
-    function buyWearables(bytes32 wearablesSubject, uint256 amount) public payable {
+    function buyWearables(
+        bytes32 wearablesSubject,
+        uint256 amount
+    ) public payable {
         uint256 supply = wearablesSupply[wearablesSubject];
         require(supply > 0, "WEARABLE_NOT_CREATED");
 
@@ -186,7 +210,10 @@ contract SofamonWearables is Ownable {
         require(success1 && success2, "UNABLE_TO_SEND_FUNDS");
     }
 
-    function sellWearables(bytes32 wearablesSubject, uint256 amount) public payable {
+    function sellWearables(
+        bytes32 wearablesSubject,
+        uint256 amount
+    ) public payable {
         uint256 supply = wearablesSupply[wearablesSubject];
         require(supply > amount, "CANNOT_SELL_LAST_WEARABLE");
 
@@ -222,9 +249,6 @@ contract SofamonWearables is Ownable {
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
 
-        require(
-            success1 && success2 && success3,
-            "UNABLE_TO_SEND_FUNDS"
-        );
+        require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
     }
 }

@@ -40,9 +40,6 @@ contract SofamonWearables is Ownable {
     // Holder => lastCreationTime
     mapping(address => uint256) public lastCreationTime;
 
-    // The cooldown period between creations
-    uint256 public cooldown = 1 days;
-
     // wearablesSubject => (Holder => Balance)
     mapping(bytes32 => mapping(address => uint256)) public wearablesBalance;
 
@@ -74,10 +71,6 @@ contract SofamonWearables is Ownable {
         string memory description,
         string memory imageURI
     ) public {
-        // require(
-        //     block.timestamp >= lastCreationTime[msg.sender] + cooldown,
-        //     "WAIT_FOR_COOLDOWN"
-        // );
         bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
         lastCreationTime[msg.sender] = block.timestamp;
         uint256 supply = wearablesSupply[wearablesSubject];

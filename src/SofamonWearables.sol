@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import {Ownable} from "./Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SofamonWearables is Ownable {
+    using ECDSA for bytes32;
+
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
@@ -80,9 +82,11 @@ contract SofamonWearables is Ownable {
         bytes calldata signature
     ) public {
         // Validate signature
-        bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, template, description, imageURI));
+        bytes32 hashVal = keccak256(
+            abi.encodePacked(msg.sender, name, template, description, imageURI)
+        );
         require(_verifySignature(hashVal, signature), "INVALID_SIGNATURE");
-        
+
         bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
         lastCreationTime[msg.sender] = block.timestamp;
         uint256 supply = wearablesSupply[wearablesSubject];
@@ -103,8 +107,7 @@ contract SofamonWearables is Ownable {
         bytes calldata signature
     ) internal view returns (bool) {
         return
-            hashVal.toEthSignedMessageHash().recover(signature) ==
-            createSigner;
+            hashVal.toEthSignedMessageHash().recover(signature) == createSigner;
     }
 
     function getPrice(

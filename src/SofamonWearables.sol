@@ -55,7 +55,7 @@ contract SofamonWearables is Ownable {
     constructor(address _signer) Ownable() {
         protocolFeePercent = 50000000000000000;
         subjectFeePercent = 50000000000000000;
-        createSigner = _signer; // Set the signer's public key
+        createSigner = _signer;
     }
 
     function setProtocolFeeDestination(

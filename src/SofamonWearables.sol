@@ -3,9 +3,11 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "./Ownable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract SofamonWearables is Ownable {
     using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;

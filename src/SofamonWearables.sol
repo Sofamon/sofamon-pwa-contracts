@@ -266,7 +266,7 @@ contract SofamonWearables is Ownable {
     }
 
     /**
-     * Public function to buy wearables
+     * Function to buy wearables
      * @param wearablesSubject Subject of the wearable
      * @param amount Amount of wearables to buy
      */
@@ -339,7 +339,7 @@ contract SofamonWearables is Ownable {
     }
 
     /**
-     * Public function to sell wearables
+     * Function to sell wearables
      * @param wearablesSubject Subject of the wearable
      * @param amount Amount of wearables to sell
      */

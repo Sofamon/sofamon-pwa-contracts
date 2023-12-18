@@ -2,14 +2,24 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+// Errors
+error InvalidSignature();
+error WearableAlreadyCreated();
+error WearableNotCreated();
+error InsufficientPayment();
+error SendFundsFailed();
+error LastWearableCannotBeSold();
+error InsufficientHoldings();
 
 /**
  * @title SofamonWearables
  * @author lixingyu.eth <@0xlxy>
  */
-contract SofamonWearables is Ownable {
+contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
@@ -122,10 +132,10 @@ contract SofamonWearables is Ownable {
      * @param signature Signature generated from the backend
      */
     function createWearable(
-        string memory name,
-        string memory template,
-        string memory description,
-        string memory imageURI,
+        string calldata name,
+        string calldata template,
+        string calldata description,
+        string calldata imageURI,
         bytes calldata signature
     ) external {
         // Validate signature
@@ -133,14 +143,15 @@ contract SofamonWearables is Ownable {
             abi.encodePacked(msg.sender, name, template, description, imageURI)
         );
         bytes32 signedHash = hashVal.toEthSignedMessageHash();
-        require(signedHash.recover(signature) == createSigner, "INVALID_SIGNATURE");
+        if (signedHash.recover(signature) != createSigner)
+            revert InvalidSignature();
 
         // Generate wearable subject
         bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
 
         // Check if wearable already exists
         uint256 supply = wearablesSupply[wearablesSubject];
-        require(supply == 0, "WEARABLE_ALREADY_CREATED");
+        if (supply != 0) revert WearableAlreadyCreated();
 
         // Update wearables mapping
         wearables[wearablesSubject] = Wearable(
@@ -276,7 +287,7 @@ contract SofamonWearables is Ownable {
     ) external payable {
         // Check if wearable exists
         uint256 supply = wearablesSupply[wearablesSubject];
-        require(supply > 0, "WEARABLE_NOT_CREATED");
+        if (supply == 0) revert WearableNotCreated();
 
         // Buy wearables
         _buyWearables(wearablesSubject, supply, amount);
@@ -303,10 +314,8 @@ contract SofamonWearables is Ownable {
         uint256 subjectFee = _getSubjectFee(price);
 
         // Check if user has enough funds
-        require(
-            msg.value >= price + protocolFee + subjectFee,
-            "INSUFFICIENT_PAYMENT"
-        );
+        if (msg.value < price + protocolFee + subjectFee)
+            revert InsufficientPayment();
 
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][msg.sender] =
@@ -335,7 +344,7 @@ contract SofamonWearables is Ownable {
         (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
 
         // Check if all funds were sent successfully
-        require(success1 && success2, "UNABLE_TO_SEND_FUNDS");
+        if (!(success1 && success2)) revert SendFundsFailed();
     }
 
     /**
@@ -349,7 +358,7 @@ contract SofamonWearables is Ownable {
     ) external payable {
         // Check if wearable exists
         uint256 supply = wearablesSupply[wearablesSubject];
-        require(supply > amount, "CANNOT_SELL_LAST_WEARABLE");
+        if (supply <= amount) revert LastWearableCannotBeSold();
 
         // Get sell price before fee
         uint256 price = getPrice(supply - amount, amount);
@@ -361,10 +370,8 @@ contract SofamonWearables is Ownable {
         uint256 subjectFee = _getSubjectFee(price);
 
         // Check if user has enough wearables for sale
-        require(
-            wearablesBalance[wearablesSubject][msg.sender] >= amount,
-            "INSUFFICIENT_HOLDINGS"
-        );
+        if (wearablesBalance[wearablesSubject][msg.sender] < amount)
+            revert InsufficientHoldings();
 
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][msg.sender] =
@@ -398,6 +405,6 @@ contract SofamonWearables is Ownable {
         (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
 
         // Check if all funds were sent successfully
-        require(success1 && success2 && success3, "UNABLE_TO_SEND_FUNDS");
+        if (!(success1 && success2 && success3)) revert SendFundsFailed();
     }
 }

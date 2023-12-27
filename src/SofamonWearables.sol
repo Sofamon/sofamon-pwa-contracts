@@ -58,6 +58,7 @@ contract SofamonWearables is Ownable2Step {
         address creator;
         string name;
         string template;
+        string description;
         string imageURI;
     }
 
@@ -158,6 +159,7 @@ contract SofamonWearables is Ownable2Step {
             msg.sender,
             name,
             template,
+            description,
             imageURI
         );
 

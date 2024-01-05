@@ -14,6 +14,8 @@ error InsufficientPayment();
 error SendFundsFailed();
 error LastWearableCannotBeSold();
 error InsufficientHoldings();
+error InvalidReceiver();
+error IncorrectSender();
 
 /**
  * @title SofamonWearables
@@ -52,6 +54,13 @@ contract SofamonWearables is Ownable2Step {
         string template,
         string description,
         string imageURI
+    );
+
+    event WearableTransferred(
+        address from,
+        address to,
+        bytes32 subject,
+        uint256 amount
     );
 
     struct Wearable {
@@ -408,5 +417,39 @@ contract SofamonWearables is Ownable2Step {
 
         // Check if all funds were sent successfully
         if (!(success1 && success2 && success3)) revert SendFundsFailed();
+    }
+
+    /**
+     * Function to transfer wearables
+     * @param wearablesSubject Subject of the wearable
+     * @param from Address of the sender
+     * @param to Address of the receiver
+     * @param amount Amount of wearables to transfer
+     */
+    function transferWearables(
+        bytes32 wearablesSubject,
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+        // Check if to address is non-zero
+        if (to == address(0)) revert InvalidReceiver();
+
+        // Check if message sender is the from address
+        if (_msgSender() != from) revert IncorrectSender();
+
+        // Check if user has enough wearables for transfer
+        if (wearablesBalance[wearablesSubject][from] < amount)
+            revert InsufficientHoldings();
+
+        // Update wearables balance and supply
+        wearablesBalance[wearablesSubject][from] =
+            wearablesBalance[wearablesSubject][from] -
+            amount;
+        wearablesBalance[wearablesSubject][to] =
+            wearablesBalance[wearablesSubject][to] +
+            amount;
+
+        emit WearableTransferred(from, to, wearablesSubject, amount);
     }
 }

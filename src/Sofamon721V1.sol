@@ -432,7 +432,10 @@ contract Sofamon721V1 is ERC721, Ownable2Step {
         // emit WearableUpdated(wearableId, FIELD_PROJECT_CREATED);
     }
 
-    function updateWearableName(uint256 _wearableId, string memory _name)
+    function updateWearableName(
+        uint256 _wearableId,
+        string memory _name
+    )
         external
         onlyOwner
         onlyValidWearableId(_wearableId)

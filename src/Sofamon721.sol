@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { ERC721Frame } from "./ERC721Frame.sol";
+import {ERC721Frame} from "./ERC721Frame.sol";
 
 contract Sofamon721 is ERC721Frame {
     using Strings for uint256;

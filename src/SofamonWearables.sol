@@ -81,11 +81,11 @@ contract SofamonWearables is Ownable2Step {
     mapping(bytes32 => uint256) public wearablesSupply;
 
     constructor(address _owner, address _signer) Ownable(_owner) {
-        // 5% protocol fee
-        protocolFeePercent = 50000000000000000;
+        // 3% protocol fee
+        protocolFeePercent = 30000000000000000;
 
-        // 5% subject fee
-        subjectFeePercent = 50000000000000000;
+        // 3% subject fee
+        subjectFeePercent = 30000000000000000;
 
         // Set create signer
         createSigner = _signer;

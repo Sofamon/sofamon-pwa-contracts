@@ -5,7 +5,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // Errors
 error InvalidSignature();
@@ -18,7 +17,9 @@ error InsufficientHoldings();
 error InvalidReceiver();
 error IncorrectSender();
 error InvalidSupplyRange();
-error InvalidLogInput();
+error InvalidAmountRange();
+error WearableNotTradable();
+error InsufficientSupply();
 
 /**
  * @title SofamonWearables
@@ -27,11 +28,6 @@ error InvalidLogInput();
 contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
-    // Euler's constant
-    uint256 private constant GAMMA = 5772156649; // Approximated as 0.5772156649 * 10^10
-
-    // Ln(2) constant
-    uint256 private constant LN2 = 693147180559945309; // Approximately 0.693147180559945309 * 10^18
 
     // Address of the protocol fee destination
     address public protocolFeeDestination;
@@ -56,6 +52,17 @@ contract SofamonWearables is Ownable2Step {
         uint256 supply
     );
 
+    event LimitedTrade(
+        address trader,
+        bytes32 subject,
+        bool isBuy,
+        uint256 wearableAmount,
+        uint256 ethAmount,
+        uint256 protocolEthAmount,
+        uint256 subjectEthAmount,
+        uint256 supply
+    );
+
     event WearableCreated(
         address creator,
         string name,
@@ -64,7 +71,22 @@ contract SofamonWearables is Ownable2Step {
         string imageURI
     );
 
+    event LimitedWearableCreated(
+        address creator,
+        string name,
+        string description,
+        string imageURI,
+        uint256 supply
+    );
+
     event WearableTransferred(
+        address from,
+        address to,
+        bytes32 subject,
+        uint256 amount
+    );
+
+    event LimitedWearableTransferred(
         address from,
         address to,
         bytes32 subject,
@@ -79,14 +101,32 @@ contract SofamonWearables is Ownable2Step {
         string imageURI;
     }
 
+    struct LimitedWearable {
+        address creator;
+        string name;
+        string description;
+        string imageURI;
+        uint256 supply;
+    }
+
     // wearablesSubject => Wearable
     mapping(bytes32 => Wearable) public wearables;
+
+    // limitedWearablesSubject => Limited Wearable
+    mapping(bytes32 => LimitedWearable) public limitedWearables;
 
     // wearablesSubject => (Holder => Balance)
     mapping(bytes32 => mapping(address => uint256)) public wearablesBalance;
 
+    // limitedWearablesSubject => (Holder => Balance)
+    mapping(bytes32 => mapping(address => uint256))
+        public limitedWearablesBalance;
+
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
+
+    // limitedWearablesSubject => Supply
+    mapping(bytes32 => uint256) public limitedWearablesSupply;
 
     constructor(address _owner, address _signer) Ownable(_owner) {
         // 3% protocol fee
@@ -180,13 +220,61 @@ contract SofamonWearables is Ownable2Step {
             imageURI
         );
 
-        // Initialize wearables supply to 500
-        wearablesSupply[wearablesSubject] = 500;
-
         emit WearableCreated(msg.sender, name, template, description, imageURI);
 
         // Creator gets the first wearable
         _buyWearables(wearablesSubject, supply, 1);
+    }
+
+    // =========================================================================
+    //                      Create Limited Wearable Logic
+    // =========================================================================
+    /**
+     * Function to create a sofamon limited wearable. invite-code needed.
+     * @param name Name of the limited wearable
+     * @param description Description of the limited wearable
+     * @param imageURI Image URI of the limited wearable
+     * @param supply Supply of the limited wearable
+     * @param signature Signature generated from the backend
+     */
+    function createLimitedWearable(
+        string calldata name,
+        string calldata description,
+        string calldata imageURI,
+        uint256 supply,
+        bytes calldata signature
+    ) external {
+        // Validate signature
+        bytes32 hashVal = keccak256(
+            abi.encodePacked(msg.sender, name, description, imageURI, supply)
+        );
+        bytes32 signedHash = hashVal.toEthSignedMessageHash();
+        if (signedHash.recover(signature) != createSigner)
+            revert InvalidSignature();
+
+        // Generate limited wearable subject
+        bytes32 limitedWearableSubject = keccak256(abi.encode(name, imageURI));
+
+        // Check if wearable already exists
+        uint256 limitedSupply = limitedWearablesSupply[limitedWearableSubject];
+        if (limitedSupply != 0) revert WearableAlreadyCreated();
+
+        // Update wearables mapping
+        limitedWearables[limitedWearableSubject] = LimitedWearable(
+            msg.sender,
+            name,
+            description,
+            imageURI,
+            supply
+        );
+
+        emit LimitedWearableCreated(
+            msg.sender,
+            name,
+            description,
+            imageURI,
+            supply
+        );
     }
 
     // =========================================================================
@@ -202,47 +290,16 @@ contract SofamonWearables is Ownable2Step {
         uint256 supply,
         uint256 amount
     ) public pure returns (uint256) {
-        // TODO: Check valid amount range
-        // Check if supply is within the valid range
-        if (!(supply >= amount && supply <= 500)) {
-            revert InvalidSupplyRange();
-        }
-
-        // Calculate the harmonic numbers for the supply before and after the transaction
-        uint256 hnBefore = approximateHn(supply);
-        uint256 hnAfter = approximateHn(supply - amount);
-
-        // Calculate the total price based on the difference in harmonic numbers
-        uint256 totalPrice = hnAfter - hnBefore;
-
-        // Adjust for the scaling used in GAMMA and harmonic approximation
-        totalPrice = (totalPrice * 1 ether) / (10 ** 10);
-
-        return totalPrice;
-    }
-
-    /**
-     * Internal function to approximate the harmonic number
-     * @param n Number to approximate the harmonic number of
-     */
-    function approximateHn(uint256 n) internal pure returns (uint256) {
-        // Using fixed-point arithmetic for calculations
-        uint256 lnPart = naturalLog(n);
-        uint256 hn = lnPart +
-            GAMMA +
-            (1 ether / (2 * n)) -
-            (1 ether / (12 * n * n));
-        return hn;
-    }
-
-    /**
-     * Internal function to calculate the natural logarithm of a number
-     * @param value Value to calculate the natural logarithm of
-     */
-    function naturalLog(uint256 value) internal pure returns (uint256) {
-·        if (value <= 0) revert InvalidLogInput();
-        uint256 log2Value = Math.log2(value);
-        return (log2Value * LN2) / 1e18;
+        uint256 sum1 = supply == 0
+            ? 0
+            : ((supply - 1) * (supply) * (2 * (supply - 1) + 1)) / 6;
+        uint256 sum2 = supply == 0 && amount == 1
+            ? 0
+            : ((supply - 1 + amount) *
+                (supply + amount) *
+                (2 * (supply - 1 + amount) + 1)) / 6;
+        uint256 summation = sum2 - sum1;
+        return (summation * 1 ether) / 16000;
     }
 
     /**
@@ -254,7 +311,6 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        // TODO: Check valid amount range
         return getPrice(wearablesSupply[wearablesSubject], amount);
     }
 
@@ -267,8 +323,7 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) public view returns (uint256) {
-        // TODO: Check valid amount range
-        return getPrice(wearablesSupply[wearablesSubject] + amount, amount);
+        return getPrice(wearablesSupply[wearablesSubject] - amount, amount);
     }
 
     /**
@@ -280,8 +335,6 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) external view returns (uint256) {
-        // TODO: Check valid amount range
-
         // Get buy price before fee
         uint256 price = getBuyPrice(wearablesSubject, amount);
 
@@ -304,8 +357,6 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) external view returns (uint256) {
-        // TODO: Check valid amount range
-
         // Get sell price before fee
         uint256 price = getSellPrice(wearablesSubject, amount);
 
@@ -344,8 +395,6 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) external payable {
-        // TODO: Check valid amount range
-
         // Check if wearable exists
         uint256 supply = wearablesSupply[wearablesSubject];
         if (supply == 0) revert WearableNotCreated();
@@ -382,7 +431,7 @@ contract SofamonWearables is Ownable2Step {
         wearablesBalance[wearablesSubject][msg.sender] =
             wearablesBalance[wearablesSubject][msg.sender] +
             amount;
-        wearablesSupply[wearablesSubject] = supply - amount;
+        wearablesSupply[wearablesSubject] = supply + amount;
 
         // Get subject fee destination
         address subjectFeeDestination = wearables[wearablesSubject].creator;
@@ -417,8 +466,6 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) external payable {
-        // TODO: Check valid amount range
-
         // Check if wearable exists
         uint256 supply = wearablesSupply[wearablesSubject];
         if (supply <= amount) revert LastWearableCannotBeSold();
@@ -440,7 +487,7 @@ contract SofamonWearables is Ownable2Step {
         wearablesBalance[wearablesSubject][msg.sender] =
             wearablesBalance[wearablesSubject][msg.sender] -
             amount;
-        wearablesSupply[wearablesSubject] = supply + amount;
+        wearablesSupply[wearablesSubject] = supply - amount;
 
         // Get subject fee destination
         address subjectFeeDestination = wearables[wearablesSubject].creator;
@@ -454,6 +501,226 @@ contract SofamonWearables is Ownable2Step {
             protocolFee,
             subjectFee,
             supply - amount
+        );
+
+        // Send sell funds to seller
+        (bool success1, ) = msg.sender.call{
+            value: price - protocolFee - subjectFee
+        }("");
+
+        // Send protocol fee to protocol fee destination
+        (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
+
+        // Send subject fee to subject fee destination
+        (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
+
+        // Check if all funds were sent successfully
+        if (!(success1 && success2 && success3)) revert SendFundsFailed();
+    }
+
+    // =========================================================================
+    //                       Trade Limited Wearable Logic
+    // =========================================================================
+    /**
+     * Pure function to get the price of the limited wearable based on the supply and amount
+     * @param supply Current supply of the limited wearable
+     * @param amount Amount of limited wearables to buy or sell
+     */
+    function getLimitedPrice(
+        uint256 supply,
+        uint8 amount
+    ) public pure returns (uint256) {
+        // Check if supply is valid
+        if (supply < 1 || supply > 500) {
+            revert InvalidSupplyRange();
+        }
+
+        // Check if amount is valid
+        if (amount > supply) {
+            revert InvalidAmountRange();
+        }
+
+        uint256 finalPrice = 0;
+        uint256 currentSupply = supply;
+
+        for (uint8 i = 0; i < amount; i++) {
+            finalPrice += 100 ether / currentSupply;
+            currentSupply--;
+        }
+
+        return finalPrice;
+    }
+
+    /**
+     * View function to get the buy price of a limited wearable
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of limited wearables to buy
+     */
+    function getLimitedBuyPrice(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) public view returns (uint256) {
+        return getPrice(wearablesSupply[limitedWearablesSubject], amount);
+    }
+
+    /**
+     * View function to get the sell price of a limited wearable
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of limited wearables to sell
+     */
+    function getLimitedSellPrice(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) public view returns (uint256) {
+        return
+            getPrice(wearablesSupply[limitedWearablesSubject] + amount - 1, amount);
+    }
+
+    /**
+     * View function to get the buy price of a limited wearable after fee
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of limited wearables to buy
+     */
+    function getLimitedBuyPriceAfterFee(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) external view returns (uint256) {
+        // Get buy price before fee
+        uint256 price = getLimitedBuyPrice(limitedWearablesSubject, amount);
+
+        // Get protocol fee
+        uint256 protocolFee = _getProtocolFee(price);
+
+        // Get subject fee
+        uint256 subjectFee = _getSubjectFee(price);
+
+        // Get final buy price
+        return price + protocolFee + subjectFee;
+    }
+
+    /**
+     * View function to get the sell price of a limited wearable after fee
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of limited wearables to sell
+     */
+    function getLimitedSellPriceAfterFee(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) external view returns (uint256) {
+        // Get sell price before fee
+        uint256 price = getLimitedSellPrice(limitedWearablesSubject, amount);
+
+        // Get protocol fee
+        uint256 protocolFee = _getProtocolFee(price);
+
+        // Get subject fee
+        uint256 subjectFee = _getSubjectFee(price);
+
+        // Get final sell price
+        return price - protocolFee - subjectFee;
+    }
+
+    /**
+     * Function to buy limited wearables
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of the limited wearables to buy
+     */
+    function buyLimitedWearables(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) external payable {
+        // Check if wearable exists
+        uint256 supply = limitedWearablesSupply[limitedWearablesSubject];
+        if (supply == 0) revert WearableNotTradable();
+
+        // Get sell price before fee
+        uint256 price = getLimitedPrice(supply, amount);
+
+        // Get protocol fee
+        uint256 protocolFee = _getProtocolFee(price);
+
+        // Get subject fee
+        uint256 subjectFee = _getSubjectFee(price);
+
+        // Check if user has enough funds
+        if (msg.value < price + protocolFee + subjectFee)
+            revert InsufficientPayment();
+
+        // Update wearables balance and supply
+        limitedWearablesBalance[limitedWearablesSubject][msg.sender] =
+            limitedWearablesBalance[limitedWearablesSubject][msg.sender] +
+            amount;
+        limitedWearablesSupply[limitedWearablesSubject] = supply - amount;
+
+        // Get subject fee destination
+        address subjectFeeDestination = wearables[limitedWearablesSubject].creator;
+
+        emit LimitedTrade(
+            msg.sender,
+            limitedWearablesSubject,
+            true,
+            amount,
+            price,
+            protocolFee,
+            subjectFee,
+            supply - amount
+        );
+
+        // Send protocol fee to protocol fee destination
+        (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
+
+        //Send subject fee to subject fee destination
+        (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
+
+        // Check if all funds were sent successfully
+        if (!(success1 && success2)) revert SendFundsFailed();
+    }
+
+    /**
+     * Function to sell limited wearables
+     * @param limitedWearablesSubject Subject of the limited wearable
+     * @param amount Amount of the limited wearables to sell
+     */
+    function sellLimitedWearables(
+        bytes32 limitedWearablesSubject,
+        uint8 amount
+    ) external payable {
+        // Check if wearable exists
+        uint256 supply = limitedWearablesSupply[limitedWearablesSubject];
+        uint256 totalSupply = limitedWearables[limitedWearablesSubject].supply;
+        if (amount > totalSupply - supply) revert InsufficientSupply();
+
+        // Get sell price before fee
+        uint256 price = getLimitedPrice(supply + amount - 1, amount);
+
+        // Get protocol fee
+        uint256 protocolFee = _getProtocolFee(price);
+
+        // Get subject fee
+        uint256 subjectFee = _getSubjectFee(price);
+
+        // Check if user has enough wearables for sale
+        if (limitedWearablesBalance[limitedWearablesSubject][msg.sender] < amount)
+            revert InsufficientHoldings();
+
+        // Update wearables balance and supply
+        limitedWearablesBalance[limitedWearablesSubject][msg.sender] =
+            limitedWearablesBalance[limitedWearablesSubject][msg.sender] -
+            amount;
+        limitedWearablesSupply[limitedWearablesSubject] = supply + amount;
+
+        // Get subject fee destination
+        address subjectFeeDestination = wearables[limitedWearablesSubject].creator;
+
+        emit LimitedTrade(
+            msg.sender,
+            limitedWearablesSubject,
+            false,
+            amount,
+            price,
+            protocolFee,
+            subjectFee,
+            supply + amount
         );
 
         // Send sell funds to seller
@@ -507,5 +774,47 @@ contract SofamonWearables is Ownable2Step {
             amount;
 
         emit WearableTransferred(from, to, wearablesSubject, amount);
+    }
+
+    // =========================================================================
+    //                    Transfer Limited Wearable Logic
+    // =========================================================================
+    /**
+     * Function to transfer limited wearables
+     * @param limitedWearablesSubject Subject of the wearable
+     * @param from Address of the sender
+     * @param to Address of the receiver
+     * @param amount Amount of wearables to transfer
+     */
+    function transferLimitedWearables(
+        bytes32 limitedWearablesSubject,
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+        // Check if to address is non-zero
+        if (to == address(0)) revert InvalidReceiver();
+
+        // Check if message sender is the from address
+        if (_msgSender() != from) revert IncorrectSender();
+
+        // Check if user has enough wearables for transfer
+        if (limitedWearablesBalance[limitedWearablesSubject][from] < amount)
+            revert InsufficientHoldings();
+
+        // Update wearables balance and supply
+        limitedWearablesBalance[limitedWearablesSubject][from] =
+            limitedWearablesBalance[limitedWearablesSubject][from] -
+            amount;
+        limitedWearablesBalance[limitedWearablesSubject][to] =
+            limitedWearablesBalance[limitedWearablesSubject][to] +
+            amount;
+
+        emit LimitedWearableTransferred(
+            from,
+            to,
+            limitedWearablesSubject,
+            amount
+        );
     }
 }

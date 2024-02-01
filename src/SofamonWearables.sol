@@ -5,6 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IBlast} from "./IBlast.sol";
 
 // Errors
 error InvalidSignature();
@@ -20,6 +21,7 @@ error InvalidSupplyRange();
 error InvalidAmountRange();
 error WearableNotTradable();
 error InsufficientSupply();
+error IneligibleToClaim();
 
 /**
  * @title SofamonWearables
@@ -40,6 +42,10 @@ contract SofamonWearables is Ownable2Step {
 
     // Address that signs messages used for creating wearables
     address public createSigner;
+
+    // Blast interface
+    IBlast public constant BLAST =
+        IBlast(0x4300000000000000000000000000000000000002);
 
     event Trade(
         address trader,
@@ -129,6 +135,15 @@ contract SofamonWearables is Ownable2Step {
     mapping(bytes32 => uint256) public limitedWearablesSupply;
 
     constructor(address _owner, address _signer) Ownable(_owner) {
+        // Configure Blast automatic yield
+        BLAST.configureAutomaticYield();
+
+        // Configure Blast claimable gas fee
+        BLAST.configureClaimableGas();
+
+        // Set contract owner to be the Blast governor
+        BLAST.configureGovernor(_owner);
+
         // 3% protocol fee
         protocolFeePercent = 30000000000000000;
 
@@ -573,7 +588,10 @@ contract SofamonWearables is Ownable2Step {
         uint8 amount
     ) public view returns (uint256) {
         return
-            getPrice(wearablesSupply[limitedWearablesSubject] + amount - 1, amount);
+            getPrice(
+                wearablesSupply[limitedWearablesSubject] + amount - 1,
+                amount
+            );
     }
 
     /**
@@ -653,7 +671,8 @@ contract SofamonWearables is Ownable2Step {
         limitedWearablesSupply[limitedWearablesSubject] = supply - amount;
 
         // Get subject fee destination
-        address subjectFeeDestination = wearables[limitedWearablesSubject].creator;
+        address subjectFeeDestination = wearables[limitedWearablesSubject]
+            .creator;
 
         emit LimitedTrade(
             msg.sender,
@@ -700,8 +719,10 @@ contract SofamonWearables is Ownable2Step {
         uint256 subjectFee = _getSubjectFee(price);
 
         // Check if user has enough wearables for sale
-        if (limitedWearablesBalance[limitedWearablesSubject][msg.sender] < amount)
-            revert InsufficientHoldings();
+        if (
+            limitedWearablesBalance[limitedWearablesSubject][msg.sender] <
+            amount
+        ) revert InsufficientHoldings();
 
         // Update wearables balance and supply
         limitedWearablesBalance[limitedWearablesSubject][msg.sender] =
@@ -710,7 +731,8 @@ contract SofamonWearables is Ownable2Step {
         limitedWearablesSupply[limitedWearablesSubject] = supply + amount;
 
         // Get subject fee destination
-        address subjectFeeDestination = wearables[limitedWearablesSubject].creator;
+        address subjectFeeDestination = wearables[limitedWearablesSubject]
+            .creator;
 
         emit LimitedTrade(
             msg.sender,
@@ -816,5 +838,64 @@ contract SofamonWearables is Ownable2Step {
             limitedWearablesSubject,
             amount
         );
+    }
+
+    // =========================================================================
+    //                          Blast Gas Claim
+    // =========================================================================
+    /**
+     * Function to claim all gas
+     * @param recipientOfGas Recipient of the gas claimed
+     */
+    function claimAllGas(address recipientOfGas) external {
+        BLAST.claimAllGas(address(this), recipientOfGas);
+    }
+
+    /**
+     * Function to claim gas with 100% claim rate
+     * @param recipientOfGas Recipient of the gas claimed
+     */
+    function claimMaxGas(address recipientOfGas) external {
+        BLAST.claimMaxGas(address(this), recipientOfGas);
+    }
+
+    /**
+     * Function to claim gas with custom claim rate
+     * @param recipientOfGas Recipient of the gas claimed
+     * @param minClaimRateBips Minimum bips of the claim rate to claim
+     */
+    function claimGasAtMinClaimRate(
+        address recipientOfGas,
+        uint256 minClaimRateBips
+    ) external {
+        BLAST.claimGasAtMinClaimRate(
+            address(this),
+            recipientOfGas,
+            minClaimRateBips
+        );
+    }
+
+    // =========================================================================
+    //                          Blast Read Config
+    // =========================================================================
+    /**
+     * Function to read the claimbale yield of this smart contract
+     */
+    function readClaimableYield() public view {
+        BLAST.readClaimableYield(address(this));
+    }
+
+    /**
+     * Function to read the yield configuration of this smart contract
+     */
+    function readYieldConfiguration() public view {
+        BLAST.readYieldConfiguration(address(this));
+    }
+
+    /**
+     * Function to read the gas params of this smart contract
+     */
+    function readGasParams() public view {
+        BLAST.readGasParams(address(this));
     }
 }

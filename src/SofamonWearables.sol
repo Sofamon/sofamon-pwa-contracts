@@ -824,10 +824,10 @@ contract SofamonWearables is Ownable2Step {
     // =========================================================================
     /**
      * Function to transfer limited wearables
-     * @param limitedWearablesSubject Subject of the wearable
+     * @param limitedWearablesSubject Subject of the limited wearable
      * @param from Address of the sender
      * @param to Address of the receiver
-     * @param amount Amount of wearables to transfer
+     * @param amount Amount of the limited wearables to transfer
      */
     function transferLimitedWearables(
         bytes32 limitedWearablesSubject,

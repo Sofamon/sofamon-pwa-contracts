@@ -17,8 +17,8 @@ error LastWearableCannotBeSold();
 error InsufficientHoldings();
 error InvalidReceiver();
 error IncorrectSender();
-error InvalidSupplyRange();
-error InvalidAmountRange();
+error InvalidSupply();
+error InvalidAmount();
 error WearableNotTradable();
 error InsufficientSupply();
 error IneligibleToClaim();
@@ -259,6 +259,9 @@ contract SofamonWearables is Ownable2Step {
         uint256 supply,
         bytes calldata signature
     ) external {
+        // Check valid supply
+        if (supply < 1 || supply > 500) revert InvalidSupply();
+
         // Validate signature
         bytes32 hashVal = keccak256(
             abi.encodePacked(msg.sender, name, description, imageURI, supply)
@@ -481,9 +484,13 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject,
         uint256 amount
     ) external payable {
-        // Check if wearable exists
+        // Check if wearable can be sold
         uint256 supply = wearablesSupply[wearablesSubject];
         if (supply <= amount) revert LastWearableCannotBeSold();
+
+        // Check if user has enough wearables for sale
+        if (wearablesBalance[wearablesSubject][msg.sender] < amount)
+            revert InsufficientHoldings();
 
         // Get sell price before fee
         uint256 price = getPrice(supply - amount, amount);
@@ -493,10 +500,6 @@ contract SofamonWearables is Ownable2Step {
 
         // Get subject fee
         uint256 subjectFee = _getSubjectFee(price);
-
-        // Check if user has enough wearables for sale
-        if (wearablesBalance[wearablesSubject][msg.sender] < amount)
-            revert InsufficientHoldings();
 
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][msg.sender] =
@@ -547,12 +550,12 @@ contract SofamonWearables is Ownable2Step {
     ) public pure returns (uint256) {
         // Check if supply is valid
         if (supply < 1 || supply > 500) {
-            revert InvalidSupplyRange();
+            revert InvalidSupply();
         }
 
         // Check if amount is valid
         if (amount > supply) {
-            revert InvalidAmountRange();
+            revert InvalidAmount();
         }
 
         uint256 finalPrice = 0;
@@ -645,11 +648,20 @@ contract SofamonWearables is Ownable2Step {
      */
     function buyLimitedWearables(
         bytes32 limitedWearablesSubject,
-        uint8 amount
+        uint8 amount,
+        bytes calldata signature
     ) external payable {
         // Check if wearable exists
         uint256 supply = limitedWearablesSupply[limitedWearablesSubject];
         if (supply == 0) revert WearableNotTradable();
+
+        // Validate signature
+        bytes32 hashVal = keccak256(
+            abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
+        );
+        bytes32 signedHash = hashVal.toEthSignedMessageHash();
+        if (signedHash.recover(signature) != createSigner)
+            revert InvalidSignature();
 
         // Get sell price before fee
         uint256 price = getLimitedPrice(supply, amount);
@@ -702,12 +714,27 @@ contract SofamonWearables is Ownable2Step {
      */
     function sellLimitedWearables(
         bytes32 limitedWearablesSubject,
-        uint8 amount
+        uint8 amount,
+        bytes calldata signature
     ) external payable {
-        // Check if wearable exists
+        // Check if wearable has sufficient supply
         uint256 supply = limitedWearablesSupply[limitedWearablesSubject];
         uint256 totalSupply = limitedWearables[limitedWearablesSubject].supply;
         if (amount > totalSupply - supply) revert InsufficientSupply();
+
+        // Validate signature
+        bytes32 hashVal = keccak256(
+            abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
+        );
+        bytes32 signedHash = hashVal.toEthSignedMessageHash();
+        if (signedHash.recover(signature) != createSigner)
+            revert InvalidSignature();
+
+        // Check if user has enough wearables for sale
+        if (
+            limitedWearablesBalance[limitedWearablesSubject][msg.sender] <
+            amount
+        ) revert InsufficientHoldings();
 
         // Get sell price before fee
         uint256 price = getLimitedPrice(supply + amount - 1, amount);
@@ -717,12 +744,6 @@ contract SofamonWearables is Ownable2Step {
 
         // Get subject fee
         uint256 subjectFee = _getSubjectFee(price);
-
-        // Check if user has enough wearables for sale
-        if (
-            limitedWearablesBalance[limitedWearablesSubject][msg.sender] <
-            amount
-        ) revert InsufficientHoldings();
 
         // Update wearables balance and supply
         limitedWearablesBalance[limitedWearablesSubject][msg.sender] =

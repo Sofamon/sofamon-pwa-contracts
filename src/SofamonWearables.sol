@@ -592,7 +592,7 @@ contract SofamonWearables is Ownable2Step {
     ) public view returns (uint256) {
         return
             getPrice(
-                wearablesSupply[limitedWearablesSubject] + amount - 1,
+                wearablesSupply[limitedWearablesSubject] + amount,
                 amount
             );
     }
@@ -737,7 +737,7 @@ contract SofamonWearables is Ownable2Step {
         ) revert InsufficientHoldings();
 
         // Get sell price before fee
-        uint256 price = getLimitedPrice(supply + amount - 1, amount);
+        uint256 price = getLimitedPrice(supply + amount, amount);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);

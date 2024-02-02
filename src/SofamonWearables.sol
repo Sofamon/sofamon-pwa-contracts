@@ -591,10 +591,7 @@ contract SofamonWearables is Ownable2Step {
         uint8 amount
     ) public view returns (uint256) {
         return
-            getPrice(
-                wearablesSupply[limitedWearablesSubject] + amount,
-                amount
-            );
+            getPrice(wearablesSupply[limitedWearablesSubject] + amount, amount);
     }
 
     /**
@@ -656,12 +653,14 @@ contract SofamonWearables is Ownable2Step {
         if (supply == 0) revert WearableNotTradable();
 
         // Validate signature
-        bytes32 hashVal = keccak256(
-            abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
-        );
-        bytes32 signedHash = hashVal.toEthSignedMessageHash();
-        if (signedHash.recover(signature) != createSigner)
-            revert InvalidSignature();
+        {
+            bytes32 hashVal = keccak256(
+                abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
+            );
+            bytes32 signedHash = hashVal.toEthSignedMessageHash();
+            if (signedHash.recover(signature) != createSigner)
+                revert InvalidSignature();
+        }
 
         // Get sell price before fee
         uint256 price = getLimitedPrice(supply, amount);
@@ -682,10 +681,6 @@ contract SofamonWearables is Ownable2Step {
             amount;
         limitedWearablesSupply[limitedWearablesSubject] = supply - amount;
 
-        // Get subject fee destination
-        address subjectFeeDestination = wearables[limitedWearablesSubject]
-            .creator;
-
         emit LimitedTrade(
             msg.sender,
             limitedWearablesSubject,
@@ -701,7 +696,9 @@ contract SofamonWearables is Ownable2Step {
         (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
 
         //Send subject fee to subject fee destination
-        (bool success2, ) = subjectFeeDestination.call{value: subjectFee}("");
+        (bool success2, ) = wearables[limitedWearablesSubject].creator.call{
+            value: subjectFee
+        }("");
 
         // Check if all funds were sent successfully
         if (!(success1 && success2)) revert SendFundsFailed();
@@ -719,22 +716,28 @@ contract SofamonWearables is Ownable2Step {
     ) external payable {
         // Check if wearable has sufficient supply
         uint256 supply = limitedWearablesSupply[limitedWearablesSubject];
-        uint256 totalSupply = limitedWearables[limitedWearablesSubject].supply;
-        if (amount > totalSupply - supply) revert InsufficientSupply();
 
-        // Validate signature
-        bytes32 hashVal = keccak256(
-            abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
-        );
-        bytes32 signedHash = hashVal.toEthSignedMessageHash();
-        if (signedHash.recover(signature) != createSigner)
-            revert InvalidSignature();
+        {
+            uint256 totalSupply = limitedWearables[limitedWearablesSubject]
+                .supply;
+            if (amount > totalSupply - supply) revert InsufficientSupply();
+        }
 
-        // Check if user has enough wearables for sale
-        if (
-            limitedWearablesBalance[limitedWearablesSubject][msg.sender] <
-            amount
-        ) revert InsufficientHoldings();
+        {
+            // Validate signature
+            bytes32 hashVal = keccak256(
+                abi.encodePacked(msg.sender, limitedWearablesSubject, amount)
+            );
+            bytes32 signedHash = hashVal.toEthSignedMessageHash();
+            if (signedHash.recover(signature) != createSigner)
+                revert InvalidSignature();
+
+            // Check if user has enough wearables for sale
+            if (
+                limitedWearablesBalance[limitedWearablesSubject][msg.sender] <
+                amount
+            ) revert InsufficientHoldings();
+        }
 
         // Get sell price before fee
         uint256 price = getLimitedPrice(supply + amount, amount);
@@ -750,10 +753,6 @@ contract SofamonWearables is Ownable2Step {
             limitedWearablesBalance[limitedWearablesSubject][msg.sender] -
             amount;
         limitedWearablesSupply[limitedWearablesSubject] = supply + amount;
-
-        // Get subject fee destination
-        address subjectFeeDestination = wearables[limitedWearablesSubject]
-            .creator;
 
         emit LimitedTrade(
             msg.sender,
@@ -775,7 +774,9 @@ contract SofamonWearables is Ownable2Step {
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
 
         // Send subject fee to subject fee destination
-        (bool success3, ) = subjectFeeDestination.call{value: subjectFee}("");
+        (bool success3, ) = wearables[limitedWearablesSubject].creator.call{
+            value: subjectFee
+        }("");
 
         // Check if all funds were sent successfully
         if (!(success1 && success2 && success3)) revert SendFundsFailed();

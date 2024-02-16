@@ -32,7 +32,7 @@ contract SofamonWearables is Ownable2Step {
     // 3% protocol fee
     uint256 public constant PROTOCOL_FEE_PERCENT = 0.03 ether;
 
-    // Each sofamon wearable share can be break down to 1000 units
+    // Base unit of a wearable. 1000 fractional shares = 1 full wearable
     uint256 public constant BASE_WEARABLE_UNIT = 0.001 ether;
 
     // Address of the protocol fee destination
@@ -85,41 +85,26 @@ contract SofamonWearables is Ownable2Step {
         createSigner = _signer;
     }
 
-    mapping(address account => uint256) private _balances;
-
-    mapping(address account => mapping(address spender => uint256)) private _allowances;
     // =========================================================================
     //                          Protocol Settings
     // =========================================================================
 
-    /**
-     * Owner-only function to set the protocol fee destination address
-     * @param _feeDestination Address that will receive the protocol fee
-     */
+    /// @dev Sets the protocol fee destination.
     function setProtocolFeeDestination(address _feeDestination) external onlyOwner {
         protocolFeeDestination = _feeDestination;
     }
 
-    /**
-     * Owner-only function to set the protocol fee percentage
-     * @param _feePercent Percentage of the protocol fee
-     */
+    /// @dev Sets the protocol fee percentage.
     function setProtocolFeePercent(uint256 _feePercent) external onlyOwner {
         protocolFeePercent = _feePercent;
     }
 
-    /**
-     * Owner-only function to set the subject fee percentage
-     * @param _feePercent Percentage of the subject fee
-     */
+    /// @dev Sets the subject fee percentage.
     function setSubjectFeePercent(uint256 _feePercent) external onlyOwner {
         subjectFeePercent = _feePercent;
     }
 
-    /**
-     * Owner-only function to set the create wearable signer
-     * @param _signer Address that signs messages used for creating wearables
-     */
+    /// @dev Sets the address that signs messages used for creating wearables.
     function setCreateSigner(address _signer) external onlyOwner {
         createSigner = _signer;
     }
@@ -128,14 +113,8 @@ contract SofamonWearables is Ownable2Step {
     //                          Create Wearable Logic
     // =========================================================================
 
-    /**
-     * Function to create a sofamon wearable. invite-code needed.
-     * @param name Name of the wearable
-     * @param template Template of the wearable
-     * @param description Description of the wearable
-     * @param imageURI Image URI of the wearable
-     * @param signature Signature generated from the backend
-     */
+    /// @dev Creates a sofamon wearable. invite-code needed.
+    /// Emits a {WearableCreated} event.
     function createWearable(
         string calldata name,
         string calldata template,
@@ -166,46 +145,27 @@ contract SofamonWearables is Ownable2Step {
     // =========================================================================
     //                          Trade Wearable Logic
     // =========================================================================
-    /**
-     * Pure function for the curve calculation
-     * @param x Input value
-     */
+    /// @dev Returns the curve of `x`
     function _curve(uint256 x) private pure returns (uint256) {
         return x * x * x;
     }
 
-    /**
-     * Pure function to get the price based on the supply and amount
-     * @param supply Current supply of the wearable
-     * @param amount Amount of wearables to buy or sell
-     */
+    /// @dev Returns the price based on `supply` and `amount`
     function getPrice(uint256 supply, uint256 amount) public pure returns (uint256) {
         return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / 48_000;
     }
 
-    /**
-     * View function to get the buy price of a wearable
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to buy
-     */
+    /// @dev Returns the buy price of `amount` of `wearablesSubject`.
     function getBuyPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
         return getPrice(wearablesSupply[wearablesSubject], amount);
     }
 
-    /**
-     * View function to get the sell price of a wearable
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to sell
-     */
+    /// @dev Returns the sell price of `amount` of `wearablesSubject`.
     function getSellPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
         return getPrice(wearablesSupply[wearablesSubject] - amount, amount);
     }
 
-    /**
-     * View function to get the buy price of a wearable after fee
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to buy
-     */
+    /// @dev Returns the buy price of `amount` of `wearablesSubject` after fee.
     function getBuyPriceAfterFee(bytes32 wearablesSubject, uint256 amount) external view returns (uint256) {
         // Get buy price before fee
         uint256 price = getBuyPrice(wearablesSubject, amount);
@@ -220,11 +180,7 @@ contract SofamonWearables is Ownable2Step {
         return price + protocolFee + subjectFee;
     }
 
-    /**
-     * View function to get the sell price of a wearable after fee
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to sell
-     */
+    /// @dev Returns the sell price of `amount` of `wearablesSubject` after fee.
     function getSellPriceAfterFee(bytes32 wearablesSubject, uint256 amount) external view returns (uint256) {
         // Get sell price before fee
         uint256 price = getSellPrice(wearablesSubject, amount);
@@ -239,27 +195,18 @@ contract SofamonWearables is Ownable2Step {
         return price - protocolFee - subjectFee;
     }
 
-    /**
-     * Internal function to get the protocol fee
-     * @param price Price of the wearable
-     */
+    /// @dev Returns the protocol fee.
     function _getProtocolFee(uint256 price) internal view returns (uint256) {
         return (price * protocolFeePercent) / 1 ether;
     }
 
-    /**
-     * Internal function to get the subject fee
-     * @param price Price of the wearable
-     */
+    /// @dev Returns the subject fee.
     function _getSubjectFee(uint256 price) internal view returns (uint256) {
         return (price * subjectFeePercent) / 1 ether;
     }
 
-    /**
-     * Function to buy wearables
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to buy
-     */
+    /// @dev Buys `amount` of `wearablesSubject`.
+    /// Emits a {Trade} event.
     function buyWearables(bytes32 wearablesSubject, uint256 amount) external payable {
         // Check if amount is greater than base unit
         if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
@@ -268,17 +215,6 @@ contract SofamonWearables is Ownable2Step {
         uint256 supply = wearablesSupply[wearablesSubject];
         if (supply == 0) revert WearableNotCreated();
 
-        // Buy wearables
-        _buyWearables(wearablesSubject, supply, amount);
-    }
-
-    /**
-     * Internal function to buy wearables. Used when creating and buying wearable
-     * @param wearablesSubject Subject of the wearable
-     * @param supply Current supply of the wearable
-     * @param amount Amount of wearables to buy
-     */
-    function _buyWearables(bytes32 wearablesSubject, uint256 supply, uint256 amount) internal {
         // Get buy price before fee
         uint256 price = getPrice(supply, amount);
 
@@ -312,11 +248,8 @@ contract SofamonWearables is Ownable2Step {
         if (!(success1 && success2)) revert SendFundsFailed();
     }
 
-    /**
-     * Function to sell wearables
-     * @param wearablesSubject Subject of the wearable
-     * @param amount Amount of wearables to sell
-     */
+    /// @dev Sells `amount` of `wearablesSubject`.
+    /// Emits a {Trade} event.
     function sellWearables(bytes32 wearablesSubject, uint256 amount) external payable {
         // Check if amount is greater than base unit
         if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
@@ -334,7 +267,7 @@ contract SofamonWearables is Ownable2Step {
         // Get subject fee
         uint256 subjectFee = _getSubjectFee(price);
 
-        // Check if user has enough wearables for sale
+        // Check if user has enough amount for sale
         if (wearablesBalance[wearablesSubject][msg.sender] < amount) {
             revert InsufficientHoldings();
         }
@@ -361,13 +294,8 @@ contract SofamonWearables is Ownable2Step {
         if (!(success1 && success2 && success3)) revert SendFundsFailed();
     }
 
-    /**
-     * Function to transfer wearables
-     * @param wearablesSubject Subject of the wearable
-     * @param from Address of the sender
-     * @param to Address of the receiver
-     * @param amount Amount of wearables to transfer
-     */
+    /// @dev Transfers `amount` of `wearablesSubject` from `from` to `to`.
+    /// Emits a {WearableTransferred} event.
     function transferWearables(bytes32 wearablesSubject, address from, address to, uint256 amount) external {
         // Check if to address is non-zero
         if (to == address(0)) revert TransferToZeroAddress();

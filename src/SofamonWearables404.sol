@@ -41,8 +41,8 @@ contract SofamonWearables is Ownable2Step {
     // Percentage of the protocol fee
     uint256 public protocolFeePercent;
 
-    // Percentage of the subject fee
-    uint256 public subjectFeePercent;
+    // Percentage of the creator fee
+    uint256 public creatorFeePercent;
 
     // Address that signs messages used for creating wearables
     address public createSigner;
@@ -54,7 +54,7 @@ contract SofamonWearables is Ownable2Step {
         uint256 wearableAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
-        uint256 subjectEthAmount,
+        uint256 creatorEthAmount,
         uint256 supply
     );
 
@@ -81,7 +81,7 @@ contract SofamonWearables is Ownable2Step {
 
     constructor(address _owner, address _signer) Ownable(_owner) {
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
-        subjectFeePercent = CREATOR_FEE_PERCENT;
+        creatorFeePercent = CREATOR_FEE_PERCENT;
         createSigner = _signer;
     }
 
@@ -99,9 +99,9 @@ contract SofamonWearables is Ownable2Step {
         protocolFeePercent = _feePercent;
     }
 
-    /// @dev Sets the subject fee percentage.
-    function setSubjectFeePercent(uint256 _feePercent) external onlyOwner {
-        subjectFeePercent = _feePercent;
+    /// @dev Sets the creator fee percentage.
+    function setCreatorFeePercent(uint256 _feePercent) external onlyOwner {
+        creatorFeePercent = _feePercent;
     }
 
     /// @dev Sets the address that signs messages used for creating wearables.
@@ -173,11 +173,11 @@ contract SofamonWearables is Ownable2Step {
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
 
-        // Get subject fee
-        uint256 subjectFee = _getSubjectFee(price);
+        // Get creator fee
+        uint256 creatorFee = _getCreatorFee(price);
 
         // Get final buy price
-        return price + protocolFee + subjectFee;
+        return price + protocolFee + creatorFee;
     }
 
     /// @dev Returns the sell price of `amount` of `wearablesSubject` after fee.
@@ -188,11 +188,11 @@ contract SofamonWearables is Ownable2Step {
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
 
-        // Get subject fee
-        uint256 subjectFee = _getSubjectFee(price);
+        // Get creator fee
+        uint256 creatorFee = _getCreatorFee(price);
 
         // Get final sell price
-        return price - protocolFee - subjectFee;
+        return price - protocolFee - creatorFee;
     }
 
     /// @dev Returns the protocol fee.
@@ -200,9 +200,9 @@ contract SofamonWearables is Ownable2Step {
         return (price * protocolFeePercent) / 1 ether;
     }
 
-    /// @dev Returns the subject fee.
-    function _getSubjectFee(uint256 price) internal view returns (uint256) {
-        return (price * subjectFeePercent) / 1 ether;
+    /// @dev Returns the creator fee.
+    function _getCreatorFee(uint256 price) internal view returns (uint256) {
+        return (price * creatorFeePercent) / 1 ether;
     }
 
     /// @dev Buys `amount` of `wearablesSubject`.
@@ -221,11 +221,11 @@ contract SofamonWearables is Ownable2Step {
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
 
-        // Get subject fee
-        uint256 subjectFee = _getSubjectFee(price);
+        // Get creator fee
+        uint256 creatorFee = _getCreatorFee(price);
 
         // Check if user has enough funds
-        if (msg.value < price + protocolFee + subjectFee) {
+        if (msg.value < price + protocolFee + creatorFee) {
             revert InsufficientPayment();
         }
 
@@ -233,16 +233,16 @@ contract SofamonWearables is Ownable2Step {
         wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] + amount;
         wearablesSupply[wearablesSubject] = supply + amount;
 
-        // Get subject fee destination
-        address subjectFeeDestination = wearables[wearablesSubject].creator;
+        // Get creator fee destination
+        address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(msg.sender, wearablesSubject, true, amount, price, protocolFee, subjectFee, supply + amount);
+        emit Trade(msg.sender, wearablesSubject, true, amount, price, protocolFee, creatorFee, supply + amount);
 
         // Send protocol fee to protocol fee destination
         (bool success1,) = protocolFeeDestination.call{value: protocolFee}("");
 
-        //Send subject fee to subject fee destination
-        (bool success2,) = subjectFeeDestination.call{value: subjectFee}("");
+        //Send creator fee to creator fee destination
+        (bool success2,) = creatorFeeDestination.call{value: creatorFee}("");
 
         // Check if all funds were sent successfully
         if (!(success1 && success2)) revert SendFundsFailed();
@@ -264,8 +264,8 @@ contract SofamonWearables is Ownable2Step {
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
 
-        // Get subject fee
-        uint256 subjectFee = _getSubjectFee(price);
+        // Get creator fee
+        uint256 creatorFee = _getCreatorFee(price);
 
         // Check if user has enough amount for sale
         if (wearablesBalance[wearablesSubject][msg.sender] < amount) {
@@ -276,19 +276,19 @@ contract SofamonWearables is Ownable2Step {
         wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] - amount;
         wearablesSupply[wearablesSubject] = supply - amount;
 
-        // Get subject fee destination
-        address subjectFeeDestination = wearables[wearablesSubject].creator;
+        // Get creator fee destination
+        address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(msg.sender, wearablesSubject, false, amount, price, protocolFee, subjectFee, supply - amount);
+        emit Trade(msg.sender, wearablesSubject, false, amount, price, protocolFee, creatorFee, supply - amount);
 
         // Send sell funds to seller
-        (bool success1,) = msg.sender.call{value: price - protocolFee - subjectFee}("");
+        (bool success1,) = msg.sender.call{value: price - protocolFee - creatorFee}("");
 
         // Send protocol fee to protocol fee destination
         (bool success2,) = protocolFeeDestination.call{value: protocolFee}("");
 
-        // Send subject fee to subject fee destination
-        (bool success3,) = subjectFeeDestination.call{value: subjectFee}("");
+        // Send creator fee to creator fee destination
+        (bool success3,) = creatorFeeDestination.call{value: creatorFee}("");
 
         // Check if all funds were sent successfully
         if (!(success1 && success2 && success3)) revert SendFundsFailed();

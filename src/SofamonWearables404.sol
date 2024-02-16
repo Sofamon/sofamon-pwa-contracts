@@ -15,7 +15,7 @@ error InsufficientPayment();
 error SendFundsFailed();
 error LastWearableCannotBeSold();
 error InsufficientHoldings();
-error InvalidReceiver();
+error TransferToZeroAddress();
 error IncorrectSender();
 
 /**
@@ -370,7 +370,10 @@ contract SofamonWearables is Ownable2Step {
      */
     function transferWearables(bytes32 wearablesSubject, address from, address to, uint256 amount) external {
         // Check if to address is non-zero
-        if (to == address(0)) revert InvalidReceiver();
+        if (to == address(0)) revert TransferToZeroAddress();
+
+        // Check if amount is greater than base unit
+        if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
         // Check if message sender is the from address
         if (_msgSender() != from) revert IncorrectSender();

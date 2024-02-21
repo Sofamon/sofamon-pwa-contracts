@@ -1,3 +1,2 @@
 forge-std/=lib/forge-std/src/
-creator-token-contracts/=lib/creator-token-contracts/contracts/
 @openzeppelin/=lib/openzeppelin-contracts/

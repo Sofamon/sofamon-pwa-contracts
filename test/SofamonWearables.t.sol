@@ -1,12 +1,107 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "../src/SofamonWearables.sol";
+import "../src/SofamonWearables404.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract SofamonWearablesTest is Test {
-    SofamonWearables public shares;
+    using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
+
+    event Trade(
+        address trader,
+        bytes32 subject,
+        bool isBuy,
+        uint256 wearableAmount,
+        uint256 ethAmount,
+        uint256 protocolEthAmount,
+        uint256 creatorEthAmount,
+        uint256 supply
+    );
+
+    event WearableCreated(address creator, string name, string template, string description, string imageURI);
+
+    event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
+
+    SofamonWearables public sofa;
+
+    uint256 internal signer1Privatekey = 0x1;
+    uint256 internal signer2Privatekey = 0x2;
+
+    address owner = address(0x11);
+    address protocolFeeDestination = address(0x22);
+    address signer1 = vm.addr(signer1Privatekey);
+    address signer2 = vm.addr(signer2Privatekey);
+    address creator1 = address(0xa);
+    address creator2 = address(0xb);
+    address user1 = address(0xc);
+    address user2 = address(0xd);
+
     function setUp() public {
-       shares = new SofamonWearables(0x5E113EDC0eaf00699889FC510DB121308bBA1261, 0x5300Ba71395230dAaD8350ec6568cF16E0511c13);
+        sofa = new SofamonWearables(owner, signer1);
+    }
+
+    function testSetProtocolFeeAndCreatorFee() public {
+        vm.startPrank(owner);
+        sofa.setProtocolFeePercent(0.05 ether);
+        sofa.setCreatorFeePercent(0.05 ether);
+        assertEq(sofa.protocolFeePercent(), 0.05 ether);
+        assertEq(sofa.creatorFeePercent(), 0.05 ether);
+    }
+
+    function testSetProtocolFeeDestination() public {
+        vm.startPrank(owner);
+        sofa.setProtocolFeeDestination(protocolFeeDestination);
+        assertEq(sofa.protocolFeeDestination(), protocolFeeDestination);
+    }
+
+    function testSetSigner() public {
+        vm.startPrank(owner);
+        sofa.setCreateSigner(signer2);
+        assertEq(sofa.createSigner(), signer2);
+    }
+
+    function testCreateWearable() public {
+        vm.startPrank(signer1);
+        bytes32 digest = keccak256(
+            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        vm.startPrank(creator1);
+        vm.expectEmit(true, true, true, true);
+        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        vm.stopPrank();
+    }
+
+    function testBuyWearables() public {
+        vm.startPrank(signer1);
+        bytes32 digest = keccak256(
+            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        vm.startPrank(creator1);
+        vm.expectEmit(true, true, true, true);
+        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        vm.stopPrank();
+
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
+        vm.startPrank(user1);
+        vm.deal(user1, 1 ether);
+        assertEq(user1.balance, 1 ether);
+        // get price for 1 full share of the wearable
+        uint256 priceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+        sofa.buyWearables{value: priceAfterFee}(wearablesSubject, 1 ether);
+        vm.stopPrank();
     }
 }

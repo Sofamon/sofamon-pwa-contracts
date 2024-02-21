@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IBlast} from "./IBlast.sol";
 
 // Errors
@@ -29,7 +28,6 @@ error IneligibleToClaim();
  */
 contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     // Address of the protocol fee destination
     address public protocolFeeDestination;
@@ -110,7 +108,7 @@ contract SofamonWearables is Ownable2Step {
     // limitedWearablesSubject => Supply
     mapping(bytes32 => uint256) public limitedWearablesSupply;
 
-    constructor(address _owner, address _signer) Ownable(_owner) {
+    constructor(address _owner, address _signer) Ownable() {
         // Configure Blast automatic yield
         BLAST.configureAutomaticYield();
 

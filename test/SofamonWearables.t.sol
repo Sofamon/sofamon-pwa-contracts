@@ -4,11 +4,9 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/SofamonWearables404.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     event Trade(
         address trader,
@@ -40,7 +38,8 @@ contract SofamonWearablesTest is Test {
     address user2 = address(0xd);
 
     function setUp() public {
-        sofa = new SofamonWearables(owner, signer1);
+        vm.prank(owner);
+        sofa = new SofamonWearables(signer1);
     }
 
     function testSetProtocolFeeAndCreatorFee() public {

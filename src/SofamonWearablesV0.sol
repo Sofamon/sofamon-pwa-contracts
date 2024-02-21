@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // Errors
 error InvalidSignature();
@@ -23,7 +22,6 @@ error IncorrectSender();
  */
 contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     // Address of the protocol fee destination
     address public protocolFeeDestination;
@@ -69,7 +67,7 @@ contract SofamonWearables is Ownable2Step {
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
-    constructor(address _owner, address _signer) Ownable(_owner) {
+    constructor(address _signer) Ownable() {
         // 3% protocol fee
         protocolFeePercent = 30000000000000000;
 

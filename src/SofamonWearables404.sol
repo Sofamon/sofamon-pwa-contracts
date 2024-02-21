@@ -25,13 +25,13 @@ contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
 
     // 3% creator fee
-    uint256 public constant CREATOR_FEE_PERCENT = 0.03 ether;
+    uint256 private constant CREATOR_FEE_PERCENT = 0.03 ether;
 
     // 3% protocol fee
-    uint256 public constant PROTOCOL_FEE_PERCENT = 0.03 ether;
+    uint256 private constant PROTOCOL_FEE_PERCENT = 0.03 ether;
 
     // Base unit of a wearable. 1000 fractional shares = 1 full wearable
-    uint256 public constant BASE_WEARABLE_UNIT = 0.001 ether;
+    uint256 private constant BASE_WEARABLE_UNIT = 0.001 ether;
 
     // Address of the protocol fee destination
     address public protocolFeeDestination;

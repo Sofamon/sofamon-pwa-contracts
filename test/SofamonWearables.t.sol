@@ -98,10 +98,24 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
-        // get price for 1 full share of the wearable
-        uint256 priceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
-        sofa.buyWearables{value: priceAfterFee}(wearablesSubject, 1 ether);
-        assertEq(user1.balance, 1 ether - priceAfterFee);
+        uint256 buyPrice = sofa.getBuyPrice(wearablesSubject, 1 ether);
+        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+        uint256 protocolFeePercent = sofa.protocolFeePercent();
+        uint256 creatorFeePercent = sofa.creatorFeePercent();
+        vm.expectEmit(true, true, true, true);
+        emit Trade(
+            user1,
+            wearablesSubject,
+            true,
+            1 ether,
+            buyPrice,
+            (buyPrice * protocolFeePercent) / 1 ether,
+            (buyPrice * creatorFeePercent) / 1 ether,
+            1 ether
+        );
+        // buy 1 full share of the wearable
+        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
+        assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
     function testSellWearables() public {
@@ -130,7 +144,21 @@ contract SofamonWearablesTest is Test {
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
         assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
 
+        uint256 sellPrice = sofa.getSellPrice(wearablesSubject, 1 ether);
         uint256 sellPriceAfterFee = sofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
+        uint256 protocolFeePercent = sofa.protocolFeePercent();
+        uint256 creatorFeePercent = sofa.creatorFeePercent();
+        vm.expectEmit(true, true, true, true);
+        emit Trade(
+            user1,
+            wearablesSubject,
+            false,
+            1 ether,
+            sellPrice,
+            (sellPrice * protocolFeePercent) / 1 ether,
+            (sellPrice * creatorFeePercent) / 1 ether,
+            1 ether
+        );
         sofa.sellWearables(wearablesSubject, 1 ether);
         assertEq(user1.balance, 1 ether - buyPriceAfterFee + sellPriceAfterFee);
         assertEq(sofa.wearablesBalance(wearablesSubject, user1), 1 ether);
@@ -162,6 +190,8 @@ contract SofamonWearablesTest is Test {
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
 
         // transfer 1 full share of the wearable to user2
+        vm.expectEmit(true, true, true, true);
+        emit WearableTransferred(user1, user2, wearablesSubject, 1 ether);
         sofa.transferWearables(wearablesSubject, user1, user2, 1 ether);
         assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
         assertEq(sofa.wearablesBalance(wearablesSubject, user2), 1 ether);

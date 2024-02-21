@@ -152,7 +152,7 @@ contract SofamonWearables is Ownable2Step {
 
     /// @dev Returns the price based on `supply` and `amount`
     function getPrice(uint256 supply, uint256 amount) public pure returns (uint256) {
-        return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / 48_000;
+        return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / 50_000;
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject`.

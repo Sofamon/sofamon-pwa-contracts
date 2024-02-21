@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -212,8 +212,9 @@ contract SofamonWearables is Ownable2Step {
         if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
         // Check if wearable exists
+        if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
+
         uint256 supply = wearablesSupply[wearablesSubject];
-        if (supply == 0) revert WearableNotCreated();
 
         // Get buy price before fee
         uint256 price = getPrice(supply, amount);

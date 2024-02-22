@@ -17,7 +17,7 @@ contract SofamonWearablesTest is Test {
     event CreateSignerUpdated(address signer);
 
     event WearableCreated(
-        address creator, bytes32 subject, string name, string template, string description, string imageURI
+        address creator, bytes32 subject, string name, string category, string description, string imageURI
     );
 
     event Trade(

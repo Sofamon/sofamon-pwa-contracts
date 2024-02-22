@@ -58,7 +58,7 @@ contract SofamonWearables is Ownable2Step {
     event CreateSignerUpdated(address signer);
 
     event WearableCreated(
-        address creator, bytes32 subject, string name, string template, string description, string imageURI
+        address creator, bytes32 subject, string name, string category, string description, string imageURI
     );
 
     event Trade(
@@ -77,7 +77,7 @@ contract SofamonWearables is Ownable2Step {
     struct Wearable {
         address creator;
         string name;
-        string template;
+        string category;
         string description;
         string imageURI;
     }
@@ -147,14 +147,14 @@ contract SofamonWearables is Ownable2Step {
     /// Emits a {WearableCreated} event.
     function createWearable(
         string calldata name,
-        string calldata template,
+        string calldata category,
         string calldata description,
         string calldata imageURI,
         bytes calldata signature
     ) external {
         // Validate signature
         {
-            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, template, description, imageURI));
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, category, description, imageURI));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(signature) != createSigner) {
                 revert InvalidSignature();
@@ -169,9 +169,9 @@ contract SofamonWearables is Ownable2Step {
         if (supply != 0) revert WearableAlreadyCreated();
 
         // Update wearables mapping
-        wearables[wearablesSubject] = Wearable(msg.sender, name, template, description, imageURI);
+        wearables[wearablesSubject] = Wearable(msg.sender, name, category, description, imageURI);
 
-        emit WearableCreated(msg.sender, wearablesSubject, name, template, description, imageURI);
+        emit WearableCreated(msg.sender, wearablesSubject, name, category, description, imageURI);
     }
 
     // =========================================================================

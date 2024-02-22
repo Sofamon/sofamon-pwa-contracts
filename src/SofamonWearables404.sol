@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IBlast} from "./IBlast.sol";
 
 // Errors
 error InvalidSignature();
@@ -44,6 +45,9 @@ contract SofamonWearables is Ownable2Step {
 
     // Address that signs messages used for creating wearables
     address public createSigner;
+
+    // Blast interface
+    IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
@@ -87,10 +91,20 @@ contract SofamonWearables is Ownable2Step {
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
-    constructor(address _signer) Ownable() {
+    constructor(address _governor, address _signer) Ownable() {
+        // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
         createSigner = _signer;
+
+        // Configure Blast automatic yield
+        BLAST.configureAutomaticYield();
+
+        // Configure Blast claimable gas fee
+        BLAST.configureClaimableGas();
+
+        // Configure Blast governor
+        BLAST.configureGovernor(_governor);
     }
 
     // =========================================================================
@@ -335,5 +349,41 @@ contract SofamonWearables is Ownable2Step {
         wearablesBalance[wearablesSubject][to] = wearablesBalance[wearablesSubject][to] + amount;
 
         emit WearableTransferred(from, to, wearablesSubject, amount);
+    }
+
+    // =========================================================================
+    //                          Blast Gas Claim
+    // =========================================================================
+    /// @dev Claim all gas
+    function claimAllGas(address recipientOfGas) external {
+        BLAST.claimAllGas(address(this), recipientOfGas);
+    }
+
+    /// @dev Claims gas with 100% claim rate
+    function claimMaxGas(address recipientOfGas) external {
+        BLAST.claimMaxGas(address(this), recipientOfGas);
+    }
+
+    /// @dev Claims gas with custom claim rate
+    function claimGasAtMinClaimRate(address recipientOfGas, uint256 minClaimRateBips) external {
+        BLAST.claimGasAtMinClaimRate(address(this), recipientOfGas, minClaimRateBips);
+    }
+
+    // =========================================================================
+    //                          Blast Read Config
+    // =========================================================================
+    /// @dev Returns the claimable yield of this smart contract
+    function readClaimableYield() public view {
+        BLAST.readClaimableYield(address(this));
+    }
+
+    /// @dev Returns the yield configuration of this smart contract
+    function readYieldConfiguration() public view {
+        BLAST.readYieldConfiguration(address(this));
+    }
+
+    /// @dev Returns the gas params of this smart contract
+    function readGasParams() public view {
+        BLAST.readGasParams(address(this));
     }
 }

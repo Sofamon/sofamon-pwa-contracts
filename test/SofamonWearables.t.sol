@@ -49,7 +49,7 @@ contract SofamonWearablesTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        sofa = new SofamonWearables(signer1);
+        sofa = new SofamonWearables(owner, signer1);
     }
 
     function testSetProtocolFeeAndCreatorFee() public {

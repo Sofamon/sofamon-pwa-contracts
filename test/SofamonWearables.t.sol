@@ -8,6 +8,18 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
 
+    event ProtocolFeeDestinationUpdated(address feeDestination);
+
+    event ProtocolFeePercentUpdated(uint256 feePercent);
+
+    event CreatorFeePercentUpdated(uint256 feePercent);
+
+    event CreateSignerUpdated(address signer);
+
+    event WearableCreated(
+        address creator, bytes32 subject, string name, string template, string description, string imageURI
+    );
+
     event Trade(
         address trader,
         bytes32 subject,
@@ -18,8 +30,6 @@ contract SofamonWearablesTest is Test {
         uint256 creatorEthAmount,
         uint256 supply
     );
-
-    event WearableCreated(address creator, string name, string template, string description, string imageURI);
 
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
@@ -44,7 +54,11 @@ contract SofamonWearablesTest is Test {
 
     function testSetProtocolFeeAndCreatorFee() public {
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFeePercentUpdated(0.05 ether);
         sofa.setProtocolFeePercent(0.05 ether);
+        vm.expectEmit(true, true, true, true);
+        emit CreatorFeePercentUpdated(0.05 ether);
         sofa.setCreatorFeePercent(0.05 ether);
         assertEq(sofa.protocolFeePercent(), 0.05 ether);
         assertEq(sofa.creatorFeePercent(), 0.05 ether);
@@ -52,17 +66,23 @@ contract SofamonWearablesTest is Test {
 
     function testSetProtocolFeeDestination() public {
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit ProtocolFeeDestinationUpdated(protocolFeeDestination);
         sofa.setProtocolFeeDestination(protocolFeeDestination);
         assertEq(sofa.protocolFeeDestination(), protocolFeeDestination);
     }
 
     function testSetSigner() public {
         vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit CreateSignerUpdated(signer2);
         sofa.setCreateSigner(signer2);
         assertEq(sofa.createSigner(), signer2);
     }
 
     function testCreateWearable() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
             abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
@@ -73,12 +93,16 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
-        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        emit WearableCreated(
+            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+        );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
         vm.stopPrank();
     }
 
     function testBuyWearables() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
             abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
@@ -89,11 +113,11 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
-        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        emit WearableCreated(
+            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+        );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
         vm.stopPrank();
-
-        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);
@@ -119,6 +143,8 @@ contract SofamonWearablesTest is Test {
     }
 
     function testSellWearables() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
             abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
@@ -129,11 +155,11 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
-        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        emit WearableCreated(
+            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+        );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
         vm.stopPrank();
-
-        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);
@@ -165,6 +191,8 @@ contract SofamonWearablesTest is Test {
     }
 
     function testTransferWearables() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
             abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
@@ -175,11 +203,11 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
-        emit WearableCreated(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url");
+        emit WearableCreated(
+            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+        );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
         vm.stopPrank();
-
-        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);

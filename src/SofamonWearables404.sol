@@ -45,6 +45,18 @@ contract SofamonWearables is Ownable2Step {
     // Address that signs messages used for creating wearables
     address public createSigner;
 
+    event ProtocolFeeDestinationUpdated(address feeDestination);
+
+    event ProtocolFeePercentUpdated(uint256 feePercent);
+
+    event CreatorFeePercentUpdated(uint256 feePercent);
+
+    event CreateSignerUpdated(address signer);
+
+    event WearableCreated(
+        address creator, bytes32 subject, string name, string template, string description, string imageURI
+    );
+
     event Trade(
         address trader,
         bytes32 subject,
@@ -55,8 +67,6 @@ contract SofamonWearables is Ownable2Step {
         uint256 creatorEthAmount,
         uint256 supply
     );
-
-    event WearableCreated(address creator, string name, string template, string description, string imageURI);
 
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
@@ -88,23 +98,31 @@ contract SofamonWearables is Ownable2Step {
     // =========================================================================
 
     /// @dev Sets the protocol fee destination.
+    /// Emits a {ProtocolFeeDestinationUpdated} event.
     function setProtocolFeeDestination(address _feeDestination) external onlyOwner {
         protocolFeeDestination = _feeDestination;
+        emit ProtocolFeeDestinationUpdated(_feeDestination);
     }
 
     /// @dev Sets the protocol fee percentage.
+    /// Emits a {ProtocolFeePercentUpdated} event.
     function setProtocolFeePercent(uint256 _feePercent) external onlyOwner {
         protocolFeePercent = _feePercent;
+        emit ProtocolFeePercentUpdated(_feePercent);
     }
 
     /// @dev Sets the creator fee percentage.
+    /// Emits a {CreatorFeePercentUpdated} event.
     function setCreatorFeePercent(uint256 _feePercent) external onlyOwner {
         creatorFeePercent = _feePercent;
+        emit CreatorFeePercentUpdated(_feePercent);
     }
 
     /// @dev Sets the address that signs messages used for creating wearables.
+    /// Emits a {CreateSignerUpdated} event.
     function setCreateSigner(address _signer) external onlyOwner {
         createSigner = _signer;
+        emit CreateSignerUpdated(_signer);
     }
 
     // =========================================================================
@@ -121,10 +139,12 @@ contract SofamonWearables is Ownable2Step {
         bytes calldata signature
     ) external {
         // Validate signature
-        bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, template, description, imageURI));
-        bytes32 signedHash = hashVal.toEthSignedMessageHash();
-        if (signedHash.recover(signature) != createSigner) {
-            revert InvalidSignature();
+        {
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, template, description, imageURI));
+            bytes32 signedHash = hashVal.toEthSignedMessageHash();
+            if (signedHash.recover(signature) != createSigner) {
+                revert InvalidSignature();
+            }
         }
 
         // Generate wearable subject
@@ -137,7 +157,7 @@ contract SofamonWearables is Ownable2Step {
         // Update wearables mapping
         wearables[wearablesSubject] = Wearable(msg.sender, name, template, description, imageURI);
 
-        emit WearableCreated(msg.sender, name, template, description, imageURI);
+        emit WearableCreated(msg.sender, wearablesSubject, name, template, description, imageURI);
     }
 
     // =========================================================================

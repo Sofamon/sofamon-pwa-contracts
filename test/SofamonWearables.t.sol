@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "../src/SofamonWearables404.sol";
+import "../src/SofamonWearables.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {TestBlast} from "../test/TestBlast.sol";
 
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
@@ -38,6 +39,8 @@ contract SofamonWearablesTest is Test {
     uint256 internal signer1Privatekey = 0x1;
     uint256 internal signer2Privatekey = 0x2;
 
+    address BLAST = 0x4300000000000000000000000000000000000002;
+
     address owner = address(0x11);
     address protocolFeeDestination = address(0x22);
     address signer1 = vm.addr(signer1Privatekey);
@@ -48,6 +51,8 @@ contract SofamonWearablesTest is Test {
     address user2 = address(0xd);
 
     function setUp() public {
+        TestBlast testBlast = new TestBlast();
+        vm.etch(BLAST, address(testBlast).code);
         vm.prank(owner);
         sofa = new SofamonWearables(owner, signer1);
     }

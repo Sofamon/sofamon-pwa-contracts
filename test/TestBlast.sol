@@ -3,17 +3,6 @@ pragma solidity ^0.8.19;
 
 import {IBlast} from "../src/IBlast.sol";
 
-enum YieldMode {
-    AUTOMATIC,
-    VOID,
-    CLAIMABLE
-}
-
-enum GasMode {
-    VOID,
-    CLAIMABLE
-}
-
 contract TestBlast is IBlast {
     // configure yield
     function configureAutomaticYield() external {}

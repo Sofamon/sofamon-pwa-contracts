@@ -71,6 +71,7 @@ contract SofamonWearables is Ownable2Step {
         string category,
         string description,
         string imageURI,
+        uint256 curveAdjustmentFactor,
         SaleStates state
     );
 
@@ -88,12 +89,23 @@ contract SofamonWearables is Ownable2Step {
 
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
+    struct CreateWearableParams {
+        string name;
+        string category;
+        string description;
+        string imageURI;
+        bool isPublic;
+        uint256 curveAdjustmentFactor;
+        bytes signature;
+    }
+
     struct Wearable {
         address creator;
         string name;
         string category;
         string description;
         string imageURI;
+        uint256 curveAdjustmentFactor;
         SaleStates state;
     }
 
@@ -160,38 +172,47 @@ contract SofamonWearables is Ownable2Step {
 
     /// @dev Creates a sofamon wearable. signature needed.
     /// Emits a {WearableCreated} event.
-    function createWearable(
-        string calldata name,
-        string calldata category,
-        string calldata description,
-        string calldata imageURI,
-        bool isPublic,
-        bytes calldata signature
-    ) external {
+    function createWearable(CreateWearableParams calldata params) external {
         // Validate signature
         {
-            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, name, category, description, imageURI));
+            bytes32 hashVal = keccak256(
+                abi.encodePacked(msg.sender, params.name, params.category, params.description, params.imageURI)
+            );
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
-            if (signedHash.recover(signature) != createSigner) {
+            if (signedHash.recover(params.signature) != createSigner) {
                 revert InvalidSignature();
             }
         }
 
         // Generate wearable subject
-        bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
+        bytes32 wearablesSubject = keccak256(abi.encode(params.name, params.imageURI));
 
         // Check if wearable already exists
-        {
-            uint256 supply = wearablesSupply[wearablesSubject];
-            if (supply != 0) revert WearableAlreadyCreated();
-        }
+        if (wearables[wearablesSubject].creator != address(0)) revert WearableAlreadyCreated();
 
-        SaleStates state = isPublic ? SaleStates.PUBLIC : SaleStates.PRIVATE;
+        SaleStates state = params.isPublic ? SaleStates.PUBLIC : SaleStates.PRIVATE;
 
         // Update wearables mapping
-        wearables[wearablesSubject] = Wearable(msg.sender, name, category, description, imageURI, state);
+        wearables[wearablesSubject] = Wearable(
+            msg.sender,
+            params.name,
+            params.category,
+            params.description,
+            params.imageURI,
+            params.curveAdjustmentFactor,
+            state
+        );
 
-        emit WearableCreated(msg.sender, wearablesSubject, name, category, description, imageURI, state);
+        emit WearableCreated(
+            msg.sender,
+            wearablesSubject,
+            params.name,
+            params.category,
+            params.description,
+            params.imageURI,
+            params.curveAdjustmentFactor,
+            state
+        );
     }
 
     // =========================================================================
@@ -213,18 +234,20 @@ contract SofamonWearables is Ownable2Step {
     }
 
     /// @dev Returns the price based on `supply` and `amount`
-    function getPrice(uint256 supply, uint256 amount) public pure returns (uint256) {
-        return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / 50_000;
+    function getPrice(uint256 supply, uint256 amount, uint256 curveAdjustmentFactor) public pure returns (uint256) {
+        return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / curveAdjustmentFactor;
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject`.
     function getBuyPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
-        return getPrice(wearablesSupply[wearablesSubject], amount);
+        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
+        return getPrice(wearablesSupply[wearablesSubject], amount, curveAdjustmentFactor);
     }
 
     /// @dev Returns the sell price of `amount` of `wearablesSubject`.
     function getSellPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
-        return getPrice(wearablesSupply[wearablesSubject] - amount, amount);
+        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
+        return getPrice(wearablesSupply[wearablesSubject] - amount, amount, curveAdjustmentFactor);
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject` after fee.
@@ -311,9 +334,10 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Internal buys `amount` of `wearablesSubject`.
     function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
+        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
 
         // Get buy price before fee
-        uint256 price = getPrice(supply, amount);
+        uint256 price = getPrice(supply, amount, curveAdjustmentFactor);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
@@ -394,9 +418,10 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Internal sells `amount` of `wearablesSubject`.
     function _sellWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
+        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
 
         // Get sell price before fee
-        uint256 price = getPrice(supply - amount, amount);
+        uint256 price = getPrice(supply - amount, amount, curveAdjustmentFactor);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);

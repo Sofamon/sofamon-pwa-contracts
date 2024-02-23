@@ -26,6 +26,7 @@ contract SofamonWearablesTest is Test {
         string category,
         string description,
         string imageURI,
+        uint256 curveAdjustmentFactor,
         SofamonWearables.SaleStates state
     );
 
@@ -114,9 +115,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
     }
 
@@ -140,9 +152,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(owner);
@@ -172,9 +195,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -221,9 +255,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PRIVATE
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -254,9 +299,20 @@ contract SofamonWearablesTest is Test {
                 "hoodie",
                 "this is a test hoodie",
                 "hoodie image url",
+                50000,
                 SofamonWearables.SaleStates.PRIVATE
             );
-            sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+            sofa.createWearable(
+                SofamonWearables.CreateWearableParams({
+                    name: "test hoodie",
+                    category: "hoodie",
+                    description: "this is a test hoodie",
+                    imageURI: "hoodie image url",
+                    isPublic: true,
+                    curveAdjustmentFactor: 50000,
+                    signature: signature
+                })
+            );
             vm.stopPrank();
         }
 
@@ -313,9 +369,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -368,9 +435,20 @@ contract SofamonWearablesTest is Test {
                 "hoodie",
                 "this is a test hoodie",
                 "hoodie image url",
+                50000,
                 SofamonWearables.SaleStates.PRIVATE
             );
-            sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+            sofa.createWearable(
+                SofamonWearables.CreateWearableParams({
+                    name: "test hoodie",
+                    category: "hoodie",
+                    description: "this is a test hoodie",
+                    imageURI: "hoodie image url",
+                    isPublic: true,
+                    curveAdjustmentFactor: 50000,
+                    signature: signature
+                })
+            );
             vm.stopPrank();
         }
 
@@ -446,9 +524,20 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
+            50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        sofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50000,
+                signature: signature
+            })
+        );
         vm.stopPrank();
 
         vm.startPrank(user1);

@@ -334,10 +334,9 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Internal buys `amount` of `wearablesSubject`.
     function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
-        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
 
         // Get buy price before fee
-        uint256 price = getPrice(supply, amount, curveAdjustmentFactor);
+        uint256 price = getPrice(supply, amount, wearables[wearablesSubject].curveAdjustmentFactor);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
@@ -418,10 +417,9 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Internal sells `amount` of `wearablesSubject`.
     function _sellWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
-        uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
 
         // Get sell price before fee
-        uint256 price = getPrice(supply - amount, amount, curveAdjustmentFactor);
+        uint256 price = getPrice(supply - amount, amount, wearables[wearablesSubject].curveAdjustmentFactor);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);

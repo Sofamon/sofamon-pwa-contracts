@@ -264,7 +264,7 @@ contract SofamonWearablesTest is Test {
                 category: "hoodie",
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
-                isPublic: true,
+                isPublic: false,
                 curveAdjustmentFactor: 50000,
                 signature: signature
             })
@@ -308,7 +308,7 @@ contract SofamonWearablesTest is Test {
                     category: "hoodie",
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
-                    isPublic: true,
+                    isPublic: false,
                     curveAdjustmentFactor: 50000,
                     signature: signature
                 })
@@ -444,7 +444,7 @@ contract SofamonWearablesTest is Test {
                     category: "hoodie",
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
-                    isPublic: true,
+                    isPublic: false,
                     curveAdjustmentFactor: 50000,
                     signature: signature
                 })

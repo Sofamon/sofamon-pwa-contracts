@@ -9,6 +9,11 @@ import {TestBlast} from "../test/TestBlast.sol";
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
 
+    enum SaleStates {
+        PRIVATE,
+        PUBLIC
+    }
+
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
     event ProtocolFeePercentUpdated(uint256 feePercent);
@@ -18,13 +23,20 @@ contract SofamonWearablesTest is Test {
     event CreateSignerUpdated(address signer);
 
     event WearableCreated(
-        address creator, bytes32 subject, string name, string category, string description, string imageURI
+        address creator,
+        bytes32 subject,
+        string name,
+        string category,
+        string description,
+        string imageURI,
+        SaleStates state
     );
 
     event Trade(
         address trader,
         bytes32 subject,
         bool isBuy,
+        bool isPublic,
         uint256 wearableAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
@@ -99,9 +111,15 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
-            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
     }
 
@@ -119,9 +137,15 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
-            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -135,6 +159,7 @@ contract SofamonWearablesTest is Test {
         emit Trade(
             user1,
             wearablesSubject,
+            true,
             true,
             1 ether,
             buyPrice,
@@ -161,9 +186,15 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
-            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -184,6 +215,7 @@ contract SofamonWearablesTest is Test {
             user1,
             wearablesSubject,
             false,
+            true,
             1 ether,
             sellPrice,
             (sellPrice * protocolFeePercent) / 1 ether,
@@ -209,9 +241,15 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(creator1);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
-            creator1, wearablesSubject, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url"
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SaleStates.PUBLIC
         );
-        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", signature);
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
 
         vm.startPrank(user1);

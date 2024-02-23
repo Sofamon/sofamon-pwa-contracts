@@ -11,9 +11,9 @@ error InvalidSignature();
 error InsufficientBaseUnit();
 error WearableAlreadyCreated();
 error WearableNotCreated();
+error InvalidSaleState();
 error InsufficientPayment();
 error SendFundsFailed();
-error LastWearableCannotBeSold();
 error InsufficientHoldings();
 error TransferToZeroAddress();
 error IncorrectSender();
@@ -24,6 +24,11 @@ error IncorrectSender();
  */
 contract SofamonWearables is Ownable2Step {
     using ECDSA for bytes32;
+
+    enum SaleStates {
+        PRIVATE,
+        PUBLIC
+    }
 
     // 3% creator fee
     uint256 private constant CREATOR_FEE_PERCENT = 0.03 ether;
@@ -57,14 +62,23 @@ contract SofamonWearables is Ownable2Step {
 
     event CreateSignerUpdated(address signer);
 
+    event WearableSaleStateUpdated(bytes32 wearablesSubject, SaleStates saleState);
+
     event WearableCreated(
-        address creator, bytes32 subject, string name, string category, string description, string imageURI
+        address creator,
+        bytes32 subject,
+        string name,
+        string category,
+        string description,
+        string imageURI,
+        SaleStates state
     );
 
     event Trade(
         address trader,
         bytes32 subject,
         bool isBuy,
+        bool isPublic,
         uint256 wearableAmount,
         uint256 ethAmount,
         uint256 protocolEthAmount,
@@ -80,6 +94,7 @@ contract SofamonWearables is Ownable2Step {
         string category;
         string description;
         string imageURI;
+        SaleStates state;
     }
 
     // wearablesSubject => Wearable
@@ -143,13 +158,14 @@ contract SofamonWearables is Ownable2Step {
     //                          Create Wearable Logic
     // =========================================================================
 
-    /// @dev Creates a sofamon wearable. invite-code needed.
+    /// @dev Creates a sofamon wearable. signature needed.
     /// Emits a {WearableCreated} event.
     function createWearable(
         string calldata name,
         string calldata category,
         string calldata description,
         string calldata imageURI,
+        bool isPublic,
         bytes calldata signature
     ) external {
         // Validate signature
@@ -165,13 +181,27 @@ contract SofamonWearables is Ownable2Step {
         bytes32 wearablesSubject = keccak256(abi.encode(name, imageURI));
 
         // Check if wearable already exists
-        uint256 supply = wearablesSupply[wearablesSubject];
-        if (supply != 0) revert WearableAlreadyCreated();
+        {
+            uint256 supply = wearablesSupply[wearablesSubject];
+            if (supply != 0) revert WearableAlreadyCreated();
+        }
+
+        SaleStates state = isPublic ? SaleStates.PUBLIC : SaleStates.PRIVATE;
 
         // Update wearables mapping
-        wearables[wearablesSubject] = Wearable(msg.sender, name, category, description, imageURI);
+        wearables[wearablesSubject] = Wearable(msg.sender, name, category, description, imageURI, state);
 
-        emit WearableCreated(msg.sender, wearablesSubject, name, category, description, imageURI);
+        emit WearableCreated(msg.sender, wearablesSubject, name, category, description, imageURI, state);
+    }
+
+    // =========================================================================
+    //                          Wearables Settings
+    // =========================================================================
+    /// @dev Sets the sale state of a wearable.
+    /// Emits a {WearableSaleStateUpdated} event.
+    function setWearableSalesState(bytes32 wearablesSubject, SaleStates saleState) external onlyOwner {
+        wearables[wearablesSubject].state = saleState;
+        emit WearableSaleStateUpdated(wearablesSubject, saleState);
     }
 
     // =========================================================================
@@ -240,12 +270,45 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Buys `amount` of `wearablesSubject`.
     /// Emits a {Trade} event.
     function buyWearables(bytes32 wearablesSubject, uint256 amount) external payable {
-        // Check if amount is greater than base unit
-        if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+        {
+            // Check if amount is greater than base unit
+            if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
-        // Check if wearable exists
-        if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
+            // Check if wearable exists
+            if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
 
+            // Check if sale state is public
+            if (wearables[wearablesSubject].state != SaleStates.PUBLIC) revert InvalidSaleState();
+        }
+
+        _buyWearables(wearablesSubject, amount, true);
+    }
+
+    /// @dev Buys `amount` of `wearablesSubject` with a signature.
+    /// Emits a {Trade} event.
+    function buyPrivateWearables(bytes32 wearablesSubject, uint256 amount, bytes calldata signature) external payable {
+        {
+            // Check if amount is greater than base unit
+            if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+
+            // Check if wearable exists
+            if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
+
+            // Check if sale state is public
+            if (wearables[wearablesSubject].state != SaleStates.PRIVATE) revert InvalidSaleState();
+
+            // Validate signature
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "buy", wearablesSubject, amount));
+            bytes32 signedHash = hashVal.toEthSignedMessageHash();
+            if (signedHash.recover(signature) != createSigner) {
+                revert InvalidSignature();
+            }
+        }
+
+        _buyWearables(wearablesSubject, amount, false);
+    }
+
+    function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
 
         // Get buy price before fee
@@ -269,7 +332,9 @@ contract SofamonWearables is Ownable2Step {
         // Get creator fee destination
         address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(msg.sender, wearablesSubject, true, amount, price, protocolFee, creatorFee, supply + amount);
+        emit Trade(
+            msg.sender, wearablesSubject, true, isPublic, amount, price, protocolFee, creatorFee, supply + amount
+        );
 
         // Send protocol fee to protocol fee destination
         (bool success1,) = protocolFeeDestination.call{value: protocolFee}("");
@@ -284,12 +349,47 @@ contract SofamonWearables is Ownable2Step {
     /// @dev Sells `amount` of `wearablesSubject`.
     /// Emits a {Trade} event.
     function sellWearables(bytes32 wearablesSubject, uint256 amount) external payable {
-        // Check if amount is greater than base unit
-        if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+        {
+            // Check if amount is greater than base unit
+            if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
-        // Check if wearable exists
+            // Check if wearable exists
+            if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
+
+            // Check if sale state is public
+            if (wearables[wearablesSubject].state != SaleStates.PUBLIC) revert InvalidSaleState();
+        }
+
+        _sellWearables(wearablesSubject, amount, true);
+    }
+
+    function sellPrivateWearables(bytes32 wearablesSubject, uint256 amount, bytes calldata signature)
+        external
+        payable
+    {
+        {
+            // Check if amount is greater than base unit
+            if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+
+            // Check if wearable exists
+            if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
+
+            // Check if sale state is public
+            if (wearables[wearablesSubject].state != SaleStates.PUBLIC) revert InvalidSaleState();
+
+            // Validate signature
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "sell", wearablesSubject, amount));
+            bytes32 signedHash = hashVal.toEthSignedMessageHash();
+            if (signedHash.recover(signature) != createSigner) {
+                revert InvalidSignature();
+            }
+        }
+
+        _sellWearables(wearablesSubject, amount, false);
+    }
+
+    function _sellWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
-        if (supply <= amount) revert LastWearableCannotBeSold();
 
         // Get sell price before fee
         uint256 price = getPrice(supply - amount, amount);
@@ -312,7 +412,9 @@ contract SofamonWearables is Ownable2Step {
         // Get creator fee destination
         address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(msg.sender, wearablesSubject, false, amount, price, protocolFee, creatorFee, supply - amount);
+        emit Trade(
+            msg.sender, wearablesSubject, false, isPublic, amount, price, protocolFee, creatorFee, supply - amount
+        );
 
         // Send sell funds to seller
         (bool success1,) = msg.sender.call{value: price - protocolFee - creatorFee}("");

@@ -308,6 +308,7 @@ contract SofamonWearables is Ownable2Step {
         _buyWearables(wearablesSubject, amount, false);
     }
 
+    /// @dev Internal buys `amount` of `wearablesSubject`.
     function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
 
@@ -363,6 +364,8 @@ contract SofamonWearables is Ownable2Step {
         _sellWearables(wearablesSubject, amount, true);
     }
 
+    /// @dev Sells `amount` of `wearablesSubject` with a signature.
+    /// Emits a {Trade} event.
     function sellPrivateWearables(bytes32 wearablesSubject, uint256 amount, bytes calldata signature)
         external
         payable
@@ -388,6 +391,7 @@ contract SofamonWearables is Ownable2Step {
         _sellWearables(wearablesSubject, amount, false);
     }
 
+    /// @dev Internal sells `amount` of `wearablesSubject`.
     function _sellWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
 

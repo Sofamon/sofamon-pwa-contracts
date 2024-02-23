@@ -9,11 +9,6 @@ import {TestBlast} from "../test/TestBlast.sol";
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
 
-    enum SaleStates {
-        PRIVATE,
-        PUBLIC
-    }
-
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
     event ProtocolFeePercentUpdated(uint256 feePercent);
@@ -22,6 +17,8 @@ contract SofamonWearablesTest is Test {
 
     event CreateSignerUpdated(address signer);
 
+    event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearables.SaleStates saleState);
+
     event WearableCreated(
         address creator,
         bytes32 subject,
@@ -29,7 +26,7 @@ contract SofamonWearablesTest is Test {
         string category,
         string description,
         string imageURI,
-        SaleStates state
+        SofamonWearables.SaleStates state
     );
 
     event Trade(
@@ -117,9 +114,41 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        vm.stopPrank();
+    }
+
+    function testSetWearableSalesState() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
+        vm.startPrank(signer1);
+        bytes32 digest = keccak256(
+            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        vm.startPrank(creator1);
+        vm.expectEmit(true, true, true, true);
+        emit WearableCreated(
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SofamonWearables.SaleStates.PUBLIC
+        );
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit WearableSaleStateUpdated(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
+        sofa.setWearableSalesState(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
         vm.stopPrank();
     }
 
@@ -143,7 +172,7 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
@@ -172,6 +201,98 @@ contract SofamonWearablesTest is Test {
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
+    function testBuyPrivateWearablesFailed() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
+        vm.startPrank(signer1);
+        bytes32 digest = keccak256(
+            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        vm.startPrank(creator1);
+        vm.expectEmit(true, true, true, true);
+        emit WearableCreated(
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            SofamonWearables.SaleStates.PRIVATE
+        );
+        sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.deal(user1, 1 ether);
+        assertEq(user1.balance, 1 ether);
+        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+        vm.expectRevert(bytes4(keccak256("InvalidSaleState()")));
+        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
+    }
+
+    function testBuyPrivateWearables() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+        {
+            vm.startPrank(signer1);
+            bytes32 digest = keccak256(
+                abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            ).toEthSignedMessageHash();
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+            bytes memory signature = abi.encodePacked(r, s, v);
+            vm.stopPrank();
+
+            vm.startPrank(creator1);
+            vm.expectEmit(true, true, true, true);
+            emit WearableCreated(
+                creator1,
+                wearablesSubject,
+                "test hoodie",
+                "hoodie",
+                "this is a test hoodie",
+                "hoodie image url",
+                SofamonWearables.SaleStates.PRIVATE
+            );
+            sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+            vm.stopPrank();
+        }
+
+        {
+            vm.startPrank(signer1);
+            bytes32 digest2 =
+                keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(1 ether))).toEthSignedMessageHash();
+            (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(signer1Privatekey, digest2);
+            bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+            vm.stopPrank();
+
+            vm.startPrank(user1);
+            vm.deal(user1, 1 ether);
+            assertEq(user1.balance, 1 ether);
+            uint256 buyPrice = sofa.getBuyPrice(wearablesSubject, 1 ether);
+            uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+            uint256 protocolFeePercent = sofa.protocolFeePercent();
+            uint256 creatorFeePercent = sofa.creatorFeePercent();
+            vm.expectEmit(true, true, true, true);
+            emit Trade(
+                user1,
+                wearablesSubject,
+                true,
+                false,
+                1 ether,
+                buyPrice,
+                (buyPrice * protocolFeePercent) / 1 ether,
+                (buyPrice * creatorFeePercent) / 1 ether,
+                1 ether
+            );
+            // buy 1 full share of the wearable
+            sofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether, signature2);
+            assertEq(user1.balance, 1 ether - buyPriceAfterFee);
+        }
+    }
+
     function testSellWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
@@ -192,7 +313,7 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();
@@ -227,6 +348,84 @@ contract SofamonWearablesTest is Test {
         assertEq(sofa.wearablesBalance(wearablesSubject, user1), 1 ether);
     }
 
+    function testSellPrivateWearables() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+        {
+            vm.startPrank(signer1);
+            bytes32 digest = keccak256(
+                abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            ).toEthSignedMessageHash();
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+            bytes memory signature = abi.encodePacked(r, s, v);
+            vm.stopPrank();
+
+            vm.startPrank(creator1);
+            vm.expectEmit(true, true, true, true);
+            emit WearableCreated(
+                creator1,
+                wearablesSubject,
+                "test hoodie",
+                "hoodie",
+                "this is a test hoodie",
+                "hoodie image url",
+                SofamonWearables.SaleStates.PRIVATE
+            );
+            sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", false, signature);
+            vm.stopPrank();
+        }
+
+        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
+
+        {
+            vm.startPrank(signer1);
+            bytes32 digest2 =
+                keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(2 ether))).toEthSignedMessageHash();
+            (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(signer1Privatekey, digest2);
+            bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+            vm.stopPrank();
+
+            vm.startPrank(user1);
+            vm.deal(user1, 1 ether);
+            assertEq(user1.balance, 1 ether);
+            // get price for 2 full share of the wearable
+            sofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 2 ether, signature2);
+            assertEq(user1.balance, 1 ether - buyPriceAfterFee);
+            assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
+            vm.stopPrank();
+        }
+
+        {
+            vm.startPrank(signer1);
+            bytes32 digest3 =
+                keccak256(abi.encodePacked(user1, "sell", wearablesSubject, uint256(1 ether))).toEthSignedMessageHash();
+            (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(signer1Privatekey, digest3);
+            bytes memory signature3 = abi.encodePacked(r3, s3, v3);
+            vm.stopPrank();
+
+            vm.startPrank(user1);
+            uint256 sellPrice = sofa.getSellPrice(wearablesSubject, 1 ether);
+            uint256 sellPriceAfterFee = sofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
+            uint256 protocolFeePercent = sofa.protocolFeePercent();
+            uint256 creatorFeePercent = sofa.creatorFeePercent();
+            vm.expectEmit(true, true, true, true);
+            emit Trade(
+                user1,
+                wearablesSubject,
+                false,
+                false,
+                1 ether,
+                sellPrice,
+                (sellPrice * protocolFeePercent) / 1 ether,
+                (sellPrice * creatorFeePercent) / 1 ether,
+                1 ether
+            );
+            sofa.sellPrivateWearables(wearablesSubject, 1 ether, signature3);
+            assertEq(user1.balance, 1 ether - buyPriceAfterFee + sellPriceAfterFee);
+            assertEq(sofa.wearablesBalance(wearablesSubject, user1), 1 ether);
+            vm.stopPrank();
+        }
+    }
+
     function testTransferWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
@@ -247,7 +446,7 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         sofa.createWearable("test hoodie", "hoodie", "this is a test hoodie", "hoodie image url", true, signature);
         vm.stopPrank();

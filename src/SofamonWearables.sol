@@ -375,7 +375,7 @@ contract SofamonWearables is Ownable2Step {
             if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
 
             // Check if sale state is public
-            if (wearables[wearablesSubject].state != SaleStates.PUBLIC) revert InvalidSaleState();
+            if (wearables[wearablesSubject].state != SaleStates.PRIVATE) revert InvalidSaleState();
 
             // Validate signature
             bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "sell", wearablesSubject, amount));

@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/SofamonWearables.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestBlast} from "../test/TestBlast.sol";
 
 contract SofamonWearablesTest is Test {
@@ -63,8 +64,13 @@ contract SofamonWearablesTest is Test {
     function setUp() public {
         TestBlast testBlast = new TestBlast();
         vm.etch(BLAST, address(testBlast).code);
-        vm.prank(owner);
-        sofa = new SofamonWearables(owner, signer1);
+        vm.startPrank(owner);
+        sofa = new SofamonWearables();
+        sofa.initialize(owner, signer1);
+    }
+
+    function testSofamonWearablesUpgradable() public {
+        // deploy
     }
 
     function testSetProtocolFeeAndCreatorFee() public {

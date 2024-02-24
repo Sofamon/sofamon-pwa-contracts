@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IBlast} from "./IBlast.sol";
 
 // Errors
@@ -22,7 +22,7 @@ error IncorrectSender();
  * @title SofamonWearables
  * @author lixingyu.eth <@0xlxy>
  */
-contract SofamonWearables is Ownable2Step {
+contract SofamonWearables is Ownable2StepUpgradeable, UUPSUpgradeable {
     using ECDSA for bytes32;
 
     enum SaleStates {
@@ -118,7 +118,7 @@ contract SofamonWearables is Ownable2Step {
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
-    constructor(address _governor, address _signer) Ownable() {
+    function initialize(address _governor, address _signer) public initializer {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
@@ -132,7 +132,14 @@ contract SofamonWearables is Ownable2Step {
 
         // Configure Blast governor
         BLAST.configureGovernor(_governor);
+
+        __Ownable2Step_init();
     }
+
+    // =========================================================================
+    //                          Upgrade Implementation
+    // =========================================================================
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // =========================================================================
     //                          Protocol Settings

@@ -1,35 +1,27 @@
 # Sofamon Wearable Bonding Curve
 
 ## Overview
-Sofamon employs two types of bonding curves based on the rarity of the wearables.
+The Sofamon wearable collection is governed by a bonding curve to determine its pricing mechanism dynamically.
 
-For the common wearables (with unlimtied supply), the formula is
+### Bonding Curve Equation
+The price and supply relationship follows the bonding curve equation:
 
-$Y = \dfrac{X^2}{16000}$ 
-
-Where:
-- $X$ represents the total supply of the wearables, ranging from 1 to the limit of `uint256`.
-- $Y$ indicates the unit price of each wearable (excluding creator and protocol fees) in Ethers, at a given supply $X$.
-
-For the exclusive wearables (with limited supply),  the formula is
-
-$Y = \dfrac{100}{X}$ 
+$Y = \dfrac{X^3}{c}$ 
 
 Where:
-- $X$ represents the total supply of the wearables, ranging from `supply` to 1.
-- $Y$ indicates the unit price of each wearable (excluding creator and protocol fees) in Ethers, at a given supply $X$.
+- $X$ is the total supply of the wearables, which can range from 0 to the maximum limit of uint256.
+- $Y$ is  the cumulative price (in Ethers) of a Sofamon wearable, excluding any creator and protocol fees, for a given supply $X$.
+- $c$ is the curve adjustment factor, uniquely set during the creation of each wearable.
 
-## Initial Pricing and Supply Dynamics
+### Price Calculation
+To calculate the price required for a purchase, the equation used is:
 
-For Common Wearables:
-- The first owner of the common wearable has to be the creator. Buying at the initial price calculated as
-$\dfrac{0^2}{16000} = 0$ ETH. 
-- As the supply increases, the price for purchasing each additional wearable increases.
-- Technically there is no upper limit of the total supply. 
+price = $Y(X_2) - Y(X_1)$
 
-For Exclusive Wearables:
-- Initially, each wearable created in Sofamon has a supply of `supply` units.
-- The first owner of exclusive wearable does not have to be the creator. If supply is set to be 100, buying at the initial price calculated as
-$\dfrac{100}{100} = 1$ ETH. 
-- As the supply decreases, the price for purchasing each additional wearable increases.
-- The price for the last wearable (when supply reaches 1) will be $\dfrac{100}{1} = 100$ ETH.
+- $X_1$ is the current total wearable supply.
+- $X_2$ is the new supply after the purchase or sale.
+
+### Wearable Shares
+- Each full wearable share is equivalent to 1 Ether (1e18 wei).
+- The smallest unit of a wearable share is 0.001 Ether (1e15 wei), allowing for fractional ownership.
+- A total of 1000 fractional shares constitutes one full wearable share of the Sofamon collection.

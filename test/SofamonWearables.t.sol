@@ -45,7 +45,8 @@ contract SofamonWearablesTest is Test {
 
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
-    SofamonWearables public sofa;
+    ERC1967Proxy public proxy;
+    SofamonWearables public proxySofa;
 
     uint256 internal signer1Privatekey = 0x1;
     uint256 internal signer2Privatekey = 0x2;
@@ -64,41 +65,50 @@ contract SofamonWearablesTest is Test {
     function setUp() public {
         TestBlast testBlast = new TestBlast();
         vm.etch(BLAST, address(testBlast).code);
+
         vm.startPrank(owner);
-        sofa = new SofamonWearables();
-        sofa.initialize(owner, signer1);
+        SofamonWearables sofa = new SofamonWearables();
+        proxy = new ERC1967Proxy(address(sofa), "");
+        proxySofa = SofamonWearables(address(proxy));
+        proxySofa.initialize(owner, signer1);
     }
 
     function testSofamonWearablesUpgradable() public {
-        // deploy
+        // deploy new sofa contract
+        vm.startPrank(owner);
+        SofamonWearables sofav2 = new SofamonWearables();
+        SofamonWearables(address(proxy)).upgradeTo(address(sofav2));
+        SofamonWearables proxySofav2 = SofamonWearables(address(proxy));
+        vm.stopPrank();
+        assertEq(proxySofav2.owner(), owner);
     }
 
     function testSetProtocolFeeAndCreatorFee() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit ProtocolFeePercentUpdated(0.05 ether);
-        sofa.setProtocolFeePercent(0.05 ether);
+        proxySofa.setProtocolFeePercent(0.05 ether);
         vm.expectEmit(true, true, true, true);
         emit CreatorFeePercentUpdated(0.05 ether);
-        sofa.setCreatorFeePercent(0.05 ether);
-        assertEq(sofa.protocolFeePercent(), 0.05 ether);
-        assertEq(sofa.creatorFeePercent(), 0.05 ether);
+        proxySofa.setCreatorFeePercent(0.05 ether);
+        assertEq(proxySofa.protocolFeePercent(), 0.05 ether);
+        assertEq(proxySofa.creatorFeePercent(), 0.05 ether);
     }
 
     function testSetProtocolFeeDestination() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit ProtocolFeeDestinationUpdated(protocolFeeDestination);
-        sofa.setProtocolFeeDestination(protocolFeeDestination);
-        assertEq(sofa.protocolFeeDestination(), protocolFeeDestination);
+        proxySofa.setProtocolFeeDestination(protocolFeeDestination);
+        assertEq(proxySofa.protocolFeeDestination(), protocolFeeDestination);
     }
 
     function testSetSigner() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit CreateSignerUpdated(signer2);
-        sofa.setCreateSigner(signer2);
-        assertEq(sofa.createSigner(), signer2);
+        proxySofa.setCreateSigner(signer2);
+        assertEq(proxySofa.createSigner(), signer2);
     }
 
     function testCreateWearable() public {
@@ -124,7 +134,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -161,7 +171,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -177,7 +187,7 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableSaleStateUpdated(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
-        sofa.setWearableSalesState(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
+        proxySofa.setWearableSalesState(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
         vm.stopPrank();
     }
 
@@ -204,7 +214,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -220,10 +230,10 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
-        uint256 buyPrice = sofa.getBuyPrice(wearablesSubject, 1 ether);
-        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
-        uint256 protocolFeePercent = sofa.protocolFeePercent();
-        uint256 creatorFeePercent = sofa.creatorFeePercent();
+        uint256 buyPrice = proxySofa.getBuyPrice(wearablesSubject, 1 ether);
+        uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+        uint256 protocolFeePercent = proxySofa.protocolFeePercent();
+        uint256 creatorFeePercent = proxySofa.creatorFeePercent();
         vm.expectEmit(true, true, true, true);
         emit Trade(
             user1,
@@ -237,7 +247,7 @@ contract SofamonWearablesTest is Test {
             1 ether
         );
         // buy 1 full share of the wearable
-        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
@@ -264,7 +274,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PRIVATE
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -280,9 +290,9 @@ contract SofamonWearablesTest is Test {
         vm.startPrank(user1);
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
-        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+        uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
         vm.expectRevert(bytes4(keccak256("InvalidSaleState()")));
-        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether);
     }
 
     function testBuyPrivateWearables() public {
@@ -308,7 +318,7 @@ contract SofamonWearablesTest is Test {
                 50000,
                 SofamonWearables.SaleStates.PRIVATE
             );
-            sofa.createWearable(
+            proxySofa.createWearable(
                 SofamonWearables.CreateWearableParams({
                     name: "test hoodie",
                     category: "hoodie",
@@ -333,10 +343,10 @@ contract SofamonWearablesTest is Test {
             vm.startPrank(user1);
             vm.deal(user1, 1 ether);
             assertEq(user1.balance, 1 ether);
-            uint256 buyPrice = sofa.getBuyPrice(wearablesSubject, 1 ether);
-            uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
-            uint256 protocolFeePercent = sofa.protocolFeePercent();
-            uint256 creatorFeePercent = sofa.creatorFeePercent();
+            uint256 buyPrice = proxySofa.getBuyPrice(wearablesSubject, 1 ether);
+            uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
+            uint256 protocolFeePercent = proxySofa.protocolFeePercent();
+            uint256 creatorFeePercent = proxySofa.creatorFeePercent();
             vm.expectEmit(true, true, true, true);
             emit Trade(
                 user1,
@@ -350,7 +360,7 @@ contract SofamonWearablesTest is Test {
                 1 ether
             );
             // buy 1 full share of the wearable
-            sofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether, signature2);
+            proxySofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 1 ether, signature2);
             assertEq(user1.balance, 1 ether - buyPriceAfterFee);
         }
     }
@@ -378,7 +388,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -395,15 +405,15 @@ contract SofamonWearablesTest is Test {
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
         // get price for 2 full share of the wearable
-        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
-        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 2 ether);
+        uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 2 ether);
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
-        assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
+        assertEq(proxySofa.wearablesBalance(wearablesSubject, user1), 2 ether);
 
-        uint256 sellPrice = sofa.getSellPrice(wearablesSubject, 1 ether);
-        uint256 sellPriceAfterFee = sofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
-        uint256 protocolFeePercent = sofa.protocolFeePercent();
-        uint256 creatorFeePercent = sofa.creatorFeePercent();
+        uint256 sellPrice = proxySofa.getSellPrice(wearablesSubject, 1 ether);
+        uint256 sellPriceAfterFee = proxySofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
+        uint256 protocolFeePercent = proxySofa.protocolFeePercent();
+        uint256 creatorFeePercent = proxySofa.creatorFeePercent();
         vm.expectEmit(true, true, true, true);
         emit Trade(
             user1,
@@ -416,9 +426,9 @@ contract SofamonWearablesTest is Test {
             (sellPrice * creatorFeePercent) / 1 ether,
             1 ether
         );
-        sofa.sellWearables(wearablesSubject, 1 ether);
+        proxySofa.sellWearables(wearablesSubject, 1 ether);
         assertEq(user1.balance, 1 ether - buyPriceAfterFee + sellPriceAfterFee);
-        assertEq(sofa.wearablesBalance(wearablesSubject, user1), 1 ether);
+        assertEq(proxySofa.wearablesBalance(wearablesSubject, user1), 1 ether);
     }
 
     function testSellPrivateWearables() public {
@@ -444,7 +454,7 @@ contract SofamonWearablesTest is Test {
                 50000,
                 SofamonWearables.SaleStates.PRIVATE
             );
-            sofa.createWearable(
+            proxySofa.createWearable(
                 SofamonWearables.CreateWearableParams({
                     name: "test hoodie",
                     category: "hoodie",
@@ -458,7 +468,7 @@ contract SofamonWearablesTest is Test {
             vm.stopPrank();
         }
 
-        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
+        uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
 
         {
             vm.startPrank(signer1);
@@ -472,9 +482,9 @@ contract SofamonWearablesTest is Test {
             vm.deal(user1, 1 ether);
             assertEq(user1.balance, 1 ether);
             // get price for 2 full share of the wearable
-            sofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 2 ether, signature2);
+            proxySofa.buyPrivateWearables{value: buyPriceAfterFee}(wearablesSubject, 2 ether, signature2);
             assertEq(user1.balance, 1 ether - buyPriceAfterFee);
-            assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
+            assertEq(proxySofa.wearablesBalance(wearablesSubject, user1), 2 ether);
             vm.stopPrank();
         }
 
@@ -487,10 +497,10 @@ contract SofamonWearablesTest is Test {
             vm.stopPrank();
 
             vm.startPrank(user1);
-            uint256 sellPrice = sofa.getSellPrice(wearablesSubject, 1 ether);
-            uint256 sellPriceAfterFee = sofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
-            uint256 protocolFeePercent = sofa.protocolFeePercent();
-            uint256 creatorFeePercent = sofa.creatorFeePercent();
+            uint256 sellPrice = proxySofa.getSellPrice(wearablesSubject, 1 ether);
+            uint256 sellPriceAfterFee = proxySofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
+            uint256 protocolFeePercent = proxySofa.protocolFeePercent();
+            uint256 creatorFeePercent = proxySofa.creatorFeePercent();
             vm.expectEmit(true, true, true, true);
             emit Trade(
                 user1,
@@ -503,9 +513,9 @@ contract SofamonWearablesTest is Test {
                 (sellPrice * creatorFeePercent) / 1 ether,
                 1 ether
             );
-            sofa.sellPrivateWearables(wearablesSubject, 1 ether, signature3);
+            proxySofa.sellPrivateWearables(wearablesSubject, 1 ether, signature3);
             assertEq(user1.balance, 1 ether - buyPriceAfterFee + sellPriceAfterFee);
-            assertEq(sofa.wearablesBalance(wearablesSubject, user1), 1 ether);
+            assertEq(proxySofa.wearablesBalance(wearablesSubject, user1), 1 ether);
             vm.stopPrank();
         }
     }
@@ -533,7 +543,7 @@ contract SofamonWearablesTest is Test {
             50000,
             SofamonWearables.SaleStates.PUBLIC
         );
-        sofa.createWearable(
+        proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 name: "test hoodie",
                 category: "hoodie",
@@ -550,15 +560,15 @@ contract SofamonWearablesTest is Test {
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
         // get price for 3 full share of the wearable
-        uint256 buyPriceAfterFee = sofa.getBuyPriceAfterFee(wearablesSubject, 3 ether);
-        sofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 3 ether);
+        uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 3 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee}(wearablesSubject, 3 ether);
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
 
         // transfer 1 full share of the wearable to user2
         vm.expectEmit(true, true, true, true);
         emit WearableTransferred(user1, user2, wearablesSubject, 1 ether);
-        sofa.transferWearables(wearablesSubject, user1, user2, 1 ether);
-        assertEq(sofa.wearablesBalance(wearablesSubject, user1), 2 ether);
-        assertEq(sofa.wearablesBalance(wearablesSubject, user2), 1 ether);
+        proxySofa.transferWearables(wearablesSubject, user1, user2, 1 ether);
+        assertEq(proxySofa.wearablesBalance(wearablesSubject, user1), 2 ether);
+        assertEq(proxySofa.wearablesBalance(wearablesSubject, user2), 1 ether);
     }
 }

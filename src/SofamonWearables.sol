@@ -11,6 +11,7 @@ import {IBlast} from "./IBlast.sol";
 error InvalidSignature();
 error InsufficientBaseUnit();
 error AmountNotMultipleOfBaseUnit();
+error InvalidAdjustmentFactor();
 error WearableAlreadyCreated();
 error WearableNotCreated();
 error InvalidSaleState();
@@ -202,6 +203,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             if (signedHash.recover(params.signature) != createSigner) {
                 revert InvalidSignature();
             }
+        }
+
+        if (params.curveAdjustmentFactor < 1000 || params.curveAdjustmentFactor > 1000000) {
+            revert InvalidAdjustmentFactor();
         }
 
         // Generate wearable subject

@@ -20,6 +20,8 @@ contract SofamonWearablesTest is Test {
 
     event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearables.SaleStates saleState);
 
+    event NonceUpdated(address user, uint256 nonce);
+
     event WearableCreated(
         address creator,
         bytes32 subject,
@@ -367,9 +369,10 @@ contract SofamonWearablesTest is Test {
         }
 
         {
+            uint256 nonce = proxySofa.nonces(user1);
             vm.startPrank(signer1);
-            bytes32 digest2 =
-                keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(1 ether))).toEthSignedMessageHash();
+            bytes32 digest2 = keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(1 ether), nonce))
+                .toEthSignedMessageHash();
             (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(signer1Privatekey, digest2);
             bytes memory signature2 = abi.encodePacked(r2, s2, v2);
             vm.stopPrank();
@@ -381,6 +384,8 @@ contract SofamonWearablesTest is Test {
             uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
             uint256 protocolFeePercent = proxySofa.protocolFeePercent();
             uint256 creatorFeePercent = proxySofa.creatorFeePercent();
+            vm.expectEmit(true, true, true, true);
+            emit NonceUpdated(user1, 1);
             vm.expectEmit(true, true, true, true);
             emit Trade(
                 user1,
@@ -505,9 +510,10 @@ contract SofamonWearablesTest is Test {
         uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 2 ether);
 
         {
+            uint256 nonce1 = proxySofa.nonces(user1);
             vm.startPrank(signer1);
-            bytes32 digest2 =
-                keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(2 ether))).toEthSignedMessageHash();
+            bytes32 digest2 = keccak256(abi.encodePacked(user1, "buy", wearablesSubject, uint256(2 ether), nonce1))
+                .toEthSignedMessageHash();
             (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(signer1Privatekey, digest2);
             bytes memory signature2 = abi.encodePacked(r2, s2, v2);
             vm.stopPrank();
@@ -523,9 +529,10 @@ contract SofamonWearablesTest is Test {
         }
 
         {
+            uint256 nonce2 = proxySofa.nonces(user1);
             vm.startPrank(signer1);
-            bytes32 digest3 =
-                keccak256(abi.encodePacked(user1, "sell", wearablesSubject, uint256(1 ether))).toEthSignedMessageHash();
+            bytes32 digest3 = keccak256(abi.encodePacked(user1, "sell", wearablesSubject, uint256(1 ether), nonce2))
+                .toEthSignedMessageHash();
             (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(signer1Privatekey, digest3);
             bytes memory signature3 = abi.encodePacked(r3, s3, v3);
             vm.stopPrank();
@@ -535,6 +542,8 @@ contract SofamonWearablesTest is Test {
             uint256 sellPriceAfterFee = proxySofa.getSellPriceAfterFee(wearablesSubject, 1 ether);
             uint256 protocolFeePercent = proxySofa.protocolFeePercent();
             uint256 creatorFeePercent = proxySofa.creatorFeePercent();
+            vm.expectEmit(true, true, true, true);
+            emit NonceUpdated(user1, 2);
             vm.expectEmit(true, true, true, true);
             emit Trade(
                 user1,

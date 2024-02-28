@@ -90,6 +90,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         uint256 supply
     );
 
+    event NonceUpdated(address user, uint256 nonce);
+
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
     struct CreateWearableParams {
@@ -120,6 +122,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
+
+    // userAddress => nonce
+    mapping(address => uint256) public nonces;
 
     constructor() {
         _disableInitializers();
@@ -314,6 +319,11 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         return (price * creatorFeePercent) / 1 ether;
     }
 
+    /// @dev Returns the nonce of `user`.
+    function getUserNonce(address user) external view returns (uint256) {
+        return nonces[user];
+    }
+
     /// @dev Buys `amount` of `wearablesSubject`.
     /// Emits a {Trade} event.
     function buyWearables(bytes32 wearablesSubject, uint256 amount) external payable {
@@ -335,7 +345,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     }
 
     /// @dev Buys `amount` of `wearablesSubject` with a signature.
-    /// Emits a {Trade} event.
+    /// Emits a {NonceUpdated} {Trade} event.
     function buyPrivateWearables(bytes32 wearablesSubject, uint256 amount, bytes calldata signature) external payable {
         {
             // Check if amount is greater than base unit
@@ -350,12 +360,17 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Check if sale state is public
             if (wearables[wearablesSubject].state != SaleStates.PRIVATE) revert InvalidSaleState();
 
+            uint256 nonce = nonces[msg.sender];
             // Validate signature
-            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "buy", wearablesSubject, amount));
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "buy", wearablesSubject, amount, nonce));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(signature) != createSigner) {
                 revert InvalidSignature();
             }
+
+            nonces[msg.sender] += 1;
+
+            emit NonceUpdated(msg.sender, nonces[msg.sender]);
         }
 
         _buyWearables(wearablesSubject, amount, false);
@@ -426,7 +441,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     }
 
     /// @dev Sells `amount` of `wearablesSubject` with a signature.
-    /// Emits a {Trade} event.
+    /// Emits a {NonceUpdated} {Trade} event.
     function sellPrivateWearables(bytes32 wearablesSubject, uint256 amount, bytes calldata signature)
         external
         payable
@@ -444,12 +459,17 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Check if sale state is public
             if (wearables[wearablesSubject].state != SaleStates.PRIVATE) revert InvalidSaleState();
 
+            uint256 nonce = nonces[msg.sender];
             // Validate signature
-            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "sell", wearablesSubject, amount));
+            bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "sell", wearablesSubject, amount, nonce));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(signature) != createSigner) {
                 revert InvalidSignature();
             }
+
+            nonces[msg.sender] += 1;
+
+            emit NonceUpdated(msg.sender, nonces[msg.sender]);
         }
 
         _sellWearables(wearablesSubject, amount, false);

@@ -9,7 +9,7 @@ The price and supply relationship follows the bonding curve equation:
 $Y = \dfrac{X^3}{c}$ 
 
 Where:
-- $X$ is the total supply of the wearables, which can range from 0 to the maximum limit of uint256.
+- $X$ is the total supply of the wearables, which can range from 0 to $2^{256/3}$.
 - $Y$ is  the cumulative price (in Ethers) of a Sofamon wearable, excluding any creator and protocol fees, for a given supply $X$.
 - $c$ is the curve adjustment factor, uniquely set during the creation of each wearable.
 

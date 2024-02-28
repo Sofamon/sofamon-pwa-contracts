@@ -8,6 +8,7 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {IBlast} from "./IBlast.sol";
 
 // Errors
+error InvalidFeePercent();
 error InvalidSignature();
 error InsufficientBaseUnit();
 error AmountNotMultipleOfBaseUnit();
@@ -169,6 +170,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     /// @dev Sets the protocol fee percentage.
     /// Emits a {ProtocolFeePercentUpdated} event.
     function setProtocolFeePercent(uint256 _feePercent) external onlyOwner {
+        if (_feePercent + CREATOR_FEE_PERCENT > 0.2 ether) revert InvalidFeePercent();
+
         protocolFeePercent = _feePercent;
         emit ProtocolFeePercentUpdated(_feePercent);
     }
@@ -176,6 +179,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     /// @dev Sets the creator fee percentage.
     /// Emits a {CreatorFeePercentUpdated} event.
     function setCreatorFeePercent(uint256 _feePercent) external onlyOwner {
+        if (_feePercent + PROTOCOL_FEE_PERCENT > 0.2 ether) revert InvalidFeePercent();
+
         creatorFeePercent = _feePercent;
         emit CreatorFeePercentUpdated(_feePercent);
     }

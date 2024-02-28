@@ -15,6 +15,7 @@ error WearableAlreadyCreated();
 error WearableNotCreated();
 error InvalidSaleState();
 error InsufficientPayment();
+error ExcessivePayment();
 error SendFundsFailed();
 error InsufficientHoldings();
 error TransferToZeroAddress();
@@ -376,6 +377,11 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Check if user has enough funds
         if (msg.value < price + protocolFee + creatorFee) {
             revert InsufficientPayment();
+        }
+
+        // Check if user has excessive funds
+        if (msg.value > price + protocolFee + creatorFee) {
+            revert ExcessivePayment();
         }
 
         // Update wearables balance and supply

@@ -520,6 +520,55 @@ contract SofamonWearablesTest is Test {
         }
     }
 
+    function testSellAllWearables() public {
+        // Setup wearable
+        // ------------------------------------------------------------
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
+        vm.startPrank(signer1);
+        bytes32 digest = keccak256(
+            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        vm.startPrank(creator1);
+        proxySofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                curveAdjustmentFactor: 50_000,
+                signature: signature
+            })
+        );
+        vm.stopPrank();
+        // ------------------------------------------------------------
+
+        vm.startPrank(creator1);
+        vm.deal(creator1, 1_000_000 ether);
+
+        uint256 total = 0;
+        // buy 10 batches of wearables
+        for (uint256 i; i < 10; i++) {
+            uint256 amount = 1e18 + 49_999;
+            total += amount;
+            uint256 buyPrice = proxySofa.getBuyPriceAfterFee(wearablesSubject, amount);
+            proxySofa.buyWearables{value: buyPrice}(wearablesSubject, amount);
+        }
+
+        console.log("sellPrice                ", proxySofa.getSellPrice(wearablesSubject, total));
+        console.log("SofamonWearables balance:", address(proxySofa).balance);
+
+        // Sell all wearables
+        proxySofa.sellWearables(wearablesSubject, total);
+
+        console.log(creator1.balance);
+    }
+
     function testTransferWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 

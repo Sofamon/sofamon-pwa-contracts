@@ -246,21 +246,30 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         return x * x * x;
     }
 
-    /// @dev Returns the price based on `supply` and `amount`
-    function getPrice(uint256 supply, uint256 amount, uint256 curveAdjustmentFactor) public pure returns (uint256) {
-        return (_curve(supply + amount) - _curve(supply)) / 1 ether / 1 ether / curveAdjustmentFactor;
+    /// @dev Returns the price based on `supply` and `amount`. Round up if buy, round down if sell.
+    function getPrice(uint256 supply, uint256 amount, uint256 curveAdjustmentFactor, bool isBuy)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 price = (_curve(supply + amount) - _curve(supply));
+        // Adjust the price to round up for buy operations
+        if (isBuy && price % (1 ether * 1 ether * curveAdjustmentFactor) != 0) {
+            price += (1 ether * 1 ether * curveAdjustmentFactor) - (price % (1 ether * 1 ether * curveAdjustmentFactor));
+        }
+        return price / 1 ether / 1 ether / curveAdjustmentFactor;
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject`.
     function getBuyPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
         uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
-        return getPrice(wearablesSupply[wearablesSubject], amount, curveAdjustmentFactor);
+        return getPrice(wearablesSupply[wearablesSubject], amount, curveAdjustmentFactor, true);
     }
 
     /// @dev Returns the sell price of `amount` of `wearablesSubject`.
     function getSellPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
         uint256 curveAdjustmentFactor = wearables[wearablesSubject].curveAdjustmentFactor;
-        return getPrice(wearablesSupply[wearablesSubject] - amount, amount, curveAdjustmentFactor);
+        return getPrice(wearablesSupply[wearablesSubject] - amount, amount, curveAdjustmentFactor, false);
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject` after fee.
@@ -349,7 +358,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         uint256 supply = wearablesSupply[wearablesSubject];
 
         // Get buy price before fee
-        uint256 price = getPrice(supply, amount, wearables[wearablesSubject].curveAdjustmentFactor);
+        uint256 price = getPrice(supply, amount, wearables[wearablesSubject].curveAdjustmentFactor, true);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);
@@ -432,7 +441,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         uint256 supply = wearablesSupply[wearablesSubject];
 
         // Get sell price before fee
-        uint256 price = getPrice(supply - amount, amount, wearables[wearablesSubject].curveAdjustmentFactor);
+        uint256 price = getPrice(supply - amount, amount, wearables[wearablesSubject].curveAdjustmentFactor, false);
 
         // Get protocol fee
         uint256 protocolFee = _getProtocolFee(price);

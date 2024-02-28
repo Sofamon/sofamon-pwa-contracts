@@ -10,6 +10,7 @@ import {IBlast} from "./IBlast.sol";
 // Errors
 error InvalidSignature();
 error InsufficientBaseUnit();
+error AmountNotMultipleOfBaseUnit();
 error WearableAlreadyCreated();
 error WearableNotCreated();
 error InvalidSaleState();
@@ -319,6 +320,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Check if amount is greater than base unit
             if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
+            // Check if amount is a multiple of the base unit
+            if (amount % BASE_WEARABLE_UNIT != 0) revert AmountNotMultipleOfBaseUnit();
+
             // Check if wearable exists
             if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
 
@@ -335,6 +339,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         {
             // Check if amount is greater than base unit
             if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+
+            // Check if amount is a multiple of the base unit
+            if (amount % BASE_WEARABLE_UNIT != 0) revert AmountNotMultipleOfBaseUnit();
 
             // Check if wearable exists
             if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
@@ -399,6 +406,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Check if amount is greater than base unit
             if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
 
+            // Check if amount is a multiple of the base unit
+            if (amount % BASE_WEARABLE_UNIT != 0) revert AmountNotMultipleOfBaseUnit();
+
             // Check if wearable exists
             if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
 
@@ -418,6 +428,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         {
             // Check if amount is greater than base unit
             if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+
+            // Check if amount is a multiple of the base unit
+            if (amount % BASE_WEARABLE_UNIT != 0) revert AmountNotMultipleOfBaseUnit();
 
             // Check if wearable exists
             if (wearables[wearablesSubject].creator == address(0)) revert WearableNotCreated();
@@ -486,6 +499,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Check if amount is greater than base unit
         if (amount < BASE_WEARABLE_UNIT) revert InsufficientBaseUnit();
+
+        // Check if amount is a multiple of the base unit
+        if (amount % BASE_WEARABLE_UNIT != 0) revert AmountNotMultipleOfBaseUnit();
 
         // Check if message sender is the from address
         if (_msgSender() != from) revert IncorrectSender();

@@ -6,6 +6,7 @@ import "../src/SofamonWearables.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestBlast} from "../test/TestBlast.sol";
+import {TestBlastPoints} from "../test/TestBlastPoints.sol";
 
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
@@ -54,6 +55,7 @@ contract SofamonWearablesTest is Test {
     uint256 internal signer2Privatekey = 0x2;
 
     address BLAST = 0x4300000000000000000000000000000000000002;
+    address BLAST_POINTS = 0x2fc95838c71e76ec69ff817983BFf17c710F34E0;
 
     address owner = address(0x11);
     address protocolFeeDestination = address(0x22);
@@ -66,13 +68,15 @@ contract SofamonWearablesTest is Test {
 
     function setUp() public {
         TestBlast testBlast = new TestBlast();
+        TestBlastPoints testBlastPoints = new TestBlastPoints();
         vm.etch(BLAST, address(testBlast).code);
+        vm.etch(BLAST_POINTS, address(testBlastPoints).code);
 
         vm.startPrank(owner);
         SofamonWearables sofa = new SofamonWearables();
         proxy = new ERC1967Proxy(address(sofa), "");
         proxySofa = SofamonWearables(address(proxy));
-        proxySofa.initialize(owner, signer1);
+        proxySofa.initialize(owner, owner, signer1);
     }
 
     function testSofamonWearablesUpgradable() public {

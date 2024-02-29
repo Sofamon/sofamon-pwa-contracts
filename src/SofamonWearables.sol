@@ -6,6 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IBlast} from "./IBlast.sol";
+import {IBlastPoints} from "./IBlastPoints.sol";
 
 // Errors
 error InvalidFeePercent();
@@ -58,6 +59,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     // Blast interface
     IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
+    IBlastPoints public constant BLAST_POINTS = IBlastPoints(0x2fc95838c71e76ec69ff817983BFf17c710F34E0);
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
@@ -132,7 +134,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _governor, address _signer) public initializer {
+    function initialize(address _governor, address _operator, address _signer) public initializer {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
@@ -146,6 +148,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Configure Blast governor
         BLAST.configureGovernor(_governor);
+
+        // Configure Blast Points governor
+        BLAST_POINTS.configurePointsOperator(_operator);
 
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
@@ -201,9 +206,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     function createWearable(CreateWearableParams calldata params) external {
         // Validate signature
         {
-            bytes32 hashVal = keccak256(
-                abi.encode(msg.sender, params.name, params.category, params.description, params.imageURI)
-            );
+            bytes32 hashVal =
+                keccak256(abi.encode(msg.sender, params.name, params.category, params.description, params.imageURI));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(params.signature) != createSigner) {
                 revert InvalidSignature();

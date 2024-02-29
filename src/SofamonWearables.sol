@@ -274,11 +274,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         returns (uint256)
     {
         uint256 price = (_curve(supply + amount) - _curve(supply));
-        // Adjust the price to round up for buy operations
-        if (isBuy && price % (1 ether * 1 ether * curveAdjustmentFactor) != 0) {
-            price += (1 ether * 1 ether * curveAdjustmentFactor) - (price % (1 ether * 1 ether * curveAdjustmentFactor));
-        }
-        return price / 1 ether / 1 ether / curveAdjustmentFactor;
+        uint256 denominator = 1 ether * 1 ether * curveAdjustmentFactor;
+        return isBuy ? (price + denominator - 1) / denominator : price / denominator;
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject`.

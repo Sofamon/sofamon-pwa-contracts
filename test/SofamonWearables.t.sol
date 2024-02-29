@@ -118,7 +118,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -155,7 +155,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -198,7 +198,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -258,7 +258,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -292,7 +292,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -336,7 +336,7 @@ contract SofamonWearablesTest is Test {
         {
             vm.startPrank(signer1);
             bytes32 digest = keccak256(
-                abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+                abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
             ).toEthSignedMessageHash();
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
             bytes memory signature = abi.encodePacked(r, s, v);
@@ -409,7 +409,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -475,7 +475,7 @@ contract SofamonWearablesTest is Test {
         {
             vm.startPrank(signer1);
             bytes32 digest = keccak256(
-                abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+                abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
             ).toEthSignedMessageHash();
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
             bytes memory signature = abi.encodePacked(r, s, v);
@@ -570,7 +570,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -617,7 +617,7 @@ contract SofamonWearablesTest is Test {
 
         vm.startPrank(signer1);
         bytes32 digest = keccak256(
-            abi.encodePacked(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
+            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);

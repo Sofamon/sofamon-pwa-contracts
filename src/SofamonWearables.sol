@@ -202,7 +202,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Validate signature
         {
             bytes32 hashVal = keccak256(
-                abi.encodePacked(msg.sender, params.name, params.category, params.description, params.imageURI)
+                abi.encode(msg.sender, params.name, params.category, params.description, params.imageURI)
             );
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(params.signature) != createSigner) {

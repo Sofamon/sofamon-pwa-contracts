@@ -553,22 +553,4 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         emit WearableTransferred(from, to, wearablesSubject, amount);
     }
-
-    // =========================================================================
-    //                          Blast Gas Claim
-    // =========================================================================
-    /// @dev Claim all gas
-    function claimAllGas(address recipientOfGas) external {
-        BLAST.claimAllGas(address(this), recipientOfGas);
-    }
-
-    /// @dev Claims gas with 100% claim rate
-    function claimMaxGas(address recipientOfGas) external {
-        BLAST.claimMaxGas(address(this), recipientOfGas);
-    }
-
-    /// @dev Claims gas with custom claim rate
-    function claimGasAtMinClaimRate(address recipientOfGas, uint256 minClaimRateBips) external {
-        BLAST.claimGasAtMinClaimRate(address(this), recipientOfGas, minClaimRateBips);
-    }
 }

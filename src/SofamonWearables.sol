@@ -99,6 +99,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
     struct CreateWearableParams {
+        address creator;
         string name;
         string category;
         string description;
@@ -207,7 +208,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Validate signature
         {
             bytes32 hashVal =
-                keccak256(abi.encode(msg.sender, params.name, params.category, params.description, params.imageURI));
+                keccak256(abi.encode(params.creator, params.name, params.category, params.description, params.imageURI));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
             if (signedHash.recover(params.signature) != createSigner) {
                 revert InvalidSignature();
@@ -228,7 +229,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Update wearables mapping
         wearables[wearablesSubject] = Wearable(
-            msg.sender,
+            params.creator,
             params.name,
             params.category,
             params.description,
@@ -238,7 +239,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         );
 
         emit WearableCreated(
-            msg.sender,
+            params.creator,
             wearablesSubject,
             params.name,
             params.category,

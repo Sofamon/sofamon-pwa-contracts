@@ -128,7 +128,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -142,6 +142,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -165,7 +166,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -179,6 +180,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -208,7 +210,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -222,6 +224,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -268,9 +271,10 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -302,7 +306,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -316,6 +320,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -346,7 +351,7 @@ contract SofamonWearablesTest is Test {
             bytes memory signature = abi.encodePacked(r, s, v);
             vm.stopPrank();
 
-            vm.startPrank(creator1);
+            vm.startPrank(owner);
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -360,6 +365,7 @@ contract SofamonWearablesTest is Test {
             );
             proxySofa.createWearable(
                 SofamonWearables.CreateWearableParams({
+                    creator: creator1,
                     name: "test hoodie",
                     category: "hoodie",
                     description: "this is a test hoodie",
@@ -419,7 +425,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -433,6 +439,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -485,7 +492,7 @@ contract SofamonWearablesTest is Test {
             bytes memory signature = abi.encodePacked(r, s, v);
             vm.stopPrank();
 
-            vm.startPrank(creator1);
+            vm.startPrank(owner);
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -499,6 +506,7 @@ contract SofamonWearablesTest is Test {
             );
             proxySofa.createWearable(
                 SofamonWearables.CreateWearableParams({
+                    creator: creator1,
                     name: "test hoodie",
                     category: "hoodie",
                     description: "this is a test hoodie",
@@ -580,9 +588,10 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",
@@ -627,7 +636,7 @@ contract SofamonWearablesTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        vm.startPrank(creator1);
+        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -641,6 +650,7 @@ contract SofamonWearablesTest is Test {
         );
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
+                creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
                 description: "this is a test hoodie",

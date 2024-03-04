@@ -54,8 +54,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     // Percentage of the creator fee
     uint256 public creatorFeePercent;
 
-    // Address that signs messages used for creating wearables
-    address public createSigner;
+    // Address that signs messages used for creating wearables and private sales
+    address public wearableSigner;
 
     // Blast interface
     IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
@@ -67,7 +67,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     event CreatorFeePercentUpdated(uint256 feePercent);
 
-    event CreateSignerUpdated(address signer);
+    event WearableSignerUpdated(address signer);
 
     event WearableSaleStateUpdated(bytes32 wearablesSubject, SaleStates saleState);
 
@@ -135,11 +135,11 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _governor, address _operator, address _signer) public initializer {
+    function initialize(address _governor, address _pointsOperator, address _signer) public initializer {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
-        createSigner = _signer;
+        wearableSigner = _signer;
 
         // Configure Blast automatic yield
         BLAST.configureAutomaticYield();
@@ -151,7 +151,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         BLAST.configureGovernor(_governor);
 
         // Configure Blast Points governor
-        BLAST_POINTS.configurePointsOperator(_operator);
+        BLAST_POINTS.configurePointsOperator(_pointsOperator);
 
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
@@ -192,10 +192,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     }
 
     /// @dev Sets the address that signs messages used for creating wearables.
-    /// Emits a {CreateSignerUpdated} event.
-    function setCreateSigner(address _signer) external onlyOwner {
-        createSigner = _signer;
-        emit CreateSignerUpdated(_signer);
+    /// Emits a {WearableSignerUpdated} event.
+    function setWearableSigner(address _signer) external onlyOwner {
+        wearableSigner = _signer;
+        emit WearableSignerUpdated(_signer);
     }
 
     // =========================================================================
@@ -210,7 +210,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             bytes32 hashVal =
                 keccak256(abi.encode(params.creator, params.name, params.category, params.description, params.imageURI));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
-            if (signedHash.recover(params.signature) != createSigner) {
+            if (signedHash.recover(params.signature) != wearableSigner) {
                 revert InvalidSignature();
             }
         }
@@ -376,7 +376,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Validate signature
             bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "buy", wearablesSubject, amount, nonce));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
-            if (signedHash.recover(signature) != createSigner) {
+            if (signedHash.recover(signature) != wearableSigner) {
                 revert InvalidSignature();
             }
 
@@ -475,7 +475,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             // Validate signature
             bytes32 hashVal = keccak256(abi.encodePacked(msg.sender, "sell", wearablesSubject, amount, nonce));
             bytes32 signedHash = hashVal.toEthSignedMessageHash();
-            if (signedHash.recover(signature) != createSigner) {
+            if (signedHash.recover(signature) != wearableSigner) {
                 revert InvalidSignature();
             }
 

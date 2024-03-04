@@ -17,7 +17,7 @@ contract SofamonWearablesTest is Test {
 
     event CreatorFeePercentUpdated(uint256 feePercent);
 
-    event CreateSignerUpdated(address signer);
+    event WearableSignerUpdated(address signer);
 
     event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearables.SaleStates saleState);
 
@@ -112,9 +112,9 @@ contract SofamonWearablesTest is Test {
     function testSetSigner() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
-        emit CreateSignerUpdated(signer2);
-        proxySofa.setCreateSigner(signer2);
-        assertEq(proxySofa.createSigner(), signer2);
+        emit WearableSignerUpdated(signer2);
+        proxySofa.setWearableSigner(signer2);
+        assertEq(proxySofa.wearableSigner(), signer2);
     }
 
     function testCreateWearable() public {

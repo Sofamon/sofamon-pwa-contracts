@@ -11,6 +11,7 @@ import {IBlastPoints} from "./IBlastPoints.sol";
 // Errors
 error InvalidFeePercent();
 error InvalidSignature();
+error InvalidOperator();
 error InsufficientBaseUnit();
 error AmountNotMultipleOfBaseUnit();
 error InvalidAdjustmentFactor();
@@ -56,6 +57,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     // Address that signs messages used for creating wearables and private sales
     address public wearableSigner;
+
+    // Address that signs messages used for creating wearables
+    address public wearableOperator;
 
     // Blast interface
     IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
@@ -106,7 +110,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         string imageURI;
         bool isPublic;
         uint256 curveAdjustmentFactor;
-        bytes signature;
     }
 
     struct Wearable {
@@ -135,10 +138,14 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _governor, address _pointsOperator, address _signer) public initializer {
+    function initialize(address _governor, address _pointsOperator, address _wearableOperator, address _signer)
+        public
+        initializer
+    {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
+        wearableOperator = _wearableOperator;
         wearableSigner = _signer;
 
         // Configure Blast automatic yield
@@ -205,14 +212,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     /// @dev Creates a sofamon wearable. signature needed.
     /// Emits a {WearableCreated} event.
     function createWearable(CreateWearableParams calldata params) external {
-        // Validate signature
-        {
-            bytes32 hashVal =
-                keccak256(abi.encode(params.creator, params.name, params.category, params.description, params.imageURI));
-            bytes32 signedHash = hashVal.toEthSignedMessageHash();
-            if (signedHash.recover(params.signature) != wearableSigner) {
-                revert InvalidSignature();
-            }
+        if (msg.sender != wearableOperator) {
+            revert InvalidOperator();
         }
 
         if (params.curveAdjustmentFactor < 1000 || params.curveAdjustmentFactor > 1000000) {
@@ -255,7 +256,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     // =========================================================================
     /// @dev Sets the sale state of a wearable.
     /// Emits a {WearableSaleStateUpdated} event.
-    function setWearableSalesState(bytes32 wearablesSubject, SaleStates saleState) external onlyOwner {
+    function setWearableSalesState(bytes32 wearablesSubject, SaleStates saleState) external {
+        if (msg.sender != wearableOperator) {
+            revert InvalidOperator();
+        }
         wearables[wearablesSubject].state = saleState;
         emit WearableSaleStateUpdated(wearablesSubject, saleState);
     }

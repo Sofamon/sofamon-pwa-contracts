@@ -58,6 +58,7 @@ contract SofamonWearablesTest is Test {
     address BLAST_POINTS = 0x2fc95838c71e76ec69ff817983BFf17c710F34E0;
 
     address owner = address(0x11);
+    address operator = address(0x12);
     address protocolFeeDestination = address(0x22);
     address signer1 = vm.addr(signer1Privatekey);
     address signer2 = vm.addr(signer2Privatekey);
@@ -76,7 +77,7 @@ contract SofamonWearablesTest is Test {
         SofamonWearables sofa = new SofamonWearables();
         proxy = new ERC1967Proxy(address(sofa), "");
         proxySofa = SofamonWearables(address(proxy));
-        proxySofa.initialize(owner, owner, signer1);
+        proxySofa.initialize(owner, owner, operator, signer1);
     }
 
     function testSofamonWearablesUpgradable() public {
@@ -120,15 +121,7 @@ contract SofamonWearablesTest is Test {
     function testCreateWearable() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -148,8 +141,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();
@@ -158,15 +150,7 @@ contract SofamonWearablesTest is Test {
     function testSetWearableSalesState() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -186,13 +170,10 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
-        vm.stopPrank();
 
-        vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
         emit WearableSaleStateUpdated(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
         proxySofa.setWearableSalesState(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
@@ -202,15 +183,7 @@ contract SofamonWearablesTest is Test {
     function testBuyWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -230,8 +203,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();
@@ -263,15 +235,7 @@ contract SofamonWearablesTest is Test {
     function testExcessivePayments() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 creator: creator1,
@@ -280,8 +244,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();
@@ -298,15 +261,7 @@ contract SofamonWearablesTest is Test {
     function testBuyPrivateWearablesFailed() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -326,8 +281,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: false,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();
@@ -343,15 +297,7 @@ contract SofamonWearablesTest is Test {
     function testBuyPrivateWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
         {
-            vm.startPrank(signer1);
-            bytes32 digest = keccak256(
-                abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-            ).toEthSignedMessageHash();
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-            bytes memory signature = abi.encodePacked(r, s, v);
-            vm.stopPrank();
-
-            vm.startPrank(owner);
+            vm.startPrank(operator);
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -371,8 +317,7 @@ contract SofamonWearablesTest is Test {
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
                     isPublic: false,
-                    curveAdjustmentFactor: 50000,
-                    signature: signature
+                    curveAdjustmentFactor: 50000
                 })
             );
             vm.stopPrank();
@@ -416,16 +361,7 @@ contract SofamonWearablesTest is Test {
 
     function testSellWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
-
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -445,8 +381,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();
@@ -484,15 +419,7 @@ contract SofamonWearablesTest is Test {
     function testSellPrivateWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
         {
-            vm.startPrank(signer1);
-            bytes32 digest = keccak256(
-                abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-            ).toEthSignedMessageHash();
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-            bytes memory signature = abi.encodePacked(r, s, v);
-            vm.stopPrank();
-
-            vm.startPrank(owner);
+            vm.startPrank(operator);
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -512,8 +439,7 @@ contract SofamonWearablesTest is Test {
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
                     isPublic: false,
-                    curveAdjustmentFactor: 50000,
-                    signature: signature
+                    curveAdjustmentFactor: 50000
                 })
             );
             vm.stopPrank();
@@ -580,15 +506,7 @@ contract SofamonWearablesTest is Test {
         // ------------------------------------------------------------
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         proxySofa.createWearable(
             SofamonWearables.CreateWearableParams({
                 creator: creator1,
@@ -597,8 +515,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50_000,
-                signature: signature
+                curveAdjustmentFactor: 50_000
             })
         );
         vm.stopPrank();
@@ -628,15 +545,7 @@ contract SofamonWearablesTest is Test {
     function testTransferWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
-        vm.startPrank(signer1);
-        bytes32 digest = keccak256(
-            abi.encode(creator1, "test hoodie", "hoodie", "this is a test hoodie", "hoodie image url")
-        ).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer1Privatekey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
+        vm.startPrank(operator);
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -656,8 +565,7 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000,
-                signature: signature
+                curveAdjustmentFactor: 50000
             })
         );
         vm.stopPrank();

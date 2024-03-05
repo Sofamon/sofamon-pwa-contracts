@@ -17,12 +17,13 @@ contract SofamonWearablesScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address governor = vm.envAddress("GOVERNOR_ADDRESS");
-        address operator = vm.envAddress("OPERATOR_ADDRESS");
+        address pointsOperator = vm.envAddress("POINTS_OPERATOR_ADDRESS");
+        address wearableOperator = vm.envAddress("WEARABLE_OPERATOR_ADDRESS");
         address signer = vm.envAddress("SIGNER_ADDRESS");
         SofamonWearables sofa = new SofamonWearables();
         console.log("SofamonWearables implementation deployed at:", address(sofa));
         ERC1967Proxy proxy = new ERC1967Proxy(address(sofa), "");
-        SofamonWearables(address(proxy)).initialize(governor, operator, signer);
+        SofamonWearables(address(proxy)).initialize(governor, pointsOperator, wearableOperator, signer);
         console.log("SofamonWearables proxy deployed at:", address(proxy));
         vm.stopBroadcast();
     }

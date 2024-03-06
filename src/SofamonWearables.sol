@@ -73,6 +73,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     event WearableSignerUpdated(address signer);
 
+    event WearableOperatorUpdated(address operator);
+
     event WearableSaleStateUpdated(bytes32 wearablesSubject, SaleStates saleState);
 
     event WearableCreated(
@@ -198,11 +200,18 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         emit CreatorFeePercentUpdated(_feePercent);
     }
 
-    /// @dev Sets the address that signs messages used for creating wearables.
+    /// @dev Sets the signer address.
     /// Emits a {WearableSignerUpdated} event.
     function setWearableSigner(address _signer) external onlyOwner {
         wearableSigner = _signer;
         emit WearableSignerUpdated(_signer);
+    }
+
+    /// @dev Sets the operator address.
+    /// Emits a {WearableOperatorUpdated} event.
+    function setWearableOperator(address _operator) external onlyOwner {
+        wearableOperator = _operator;
+        emit WearableOperatorUpdated(_operator);
     }
 
     // =========================================================================

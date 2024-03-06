@@ -19,6 +19,8 @@ contract SofamonWearablesTest is Test {
 
     event WearableSignerUpdated(address signer);
 
+    event WearableOperatorUpdated(address operator);
+
     event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearables.SaleStates saleState);
 
     event NonceUpdated(address user, uint256 nonce);
@@ -59,6 +61,7 @@ contract SofamonWearablesTest is Test {
 
     address owner = address(0x11);
     address operator = address(0x12);
+    address operator2 = address(0x13);
     address protocolFeeDestination = address(0x22);
     address signer1 = vm.addr(signer1Privatekey);
     address signer2 = vm.addr(signer2Privatekey);
@@ -116,6 +119,14 @@ contract SofamonWearablesTest is Test {
         emit WearableSignerUpdated(signer2);
         proxySofa.setWearableSigner(signer2);
         assertEq(proxySofa.wearableSigner(), signer2);
+    }
+
+    function testSetOperator() public {
+        vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit WearableOperatorUpdated(operator2);
+        proxySofa.setWearableOperator(operator2);
+        assertEq(proxySofa.wearableOperator(), operator2);
     }
 
     function testCreateWearable() public {

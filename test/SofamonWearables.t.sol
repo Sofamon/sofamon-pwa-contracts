@@ -11,6 +11,10 @@ import {TestBlastPoints} from "../test/TestBlastPoints.sol";
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
 
+    event BlastGovernorUpdated(address governor);
+
+    event BlastPointsOperatorUpdated(address operator);
+
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
     event ProtocolFeePercentUpdated(uint256 feePercent);
@@ -62,6 +66,7 @@ contract SofamonWearablesTest is Test {
     address owner = address(0x11);
     address operator = address(0x12);
     address operator2 = address(0x13);
+    address governor = address(0x14);
     address protocolFeeDestination = address(0x22);
     address signer1 = vm.addr(signer1Privatekey);
     address signer2 = vm.addr(signer2Privatekey);
@@ -91,6 +96,20 @@ contract SofamonWearablesTest is Test {
         SofamonWearables proxySofav2 = SofamonWearables(address(proxy));
         vm.stopPrank();
         assertEq(proxySofav2.owner(), owner);
+    }
+
+    function testSetBlastGovernor() public {
+        vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit BlastGovernorUpdated(governor);
+        proxySofa.setBlastGovernor(governor);
+    }
+
+    function testSetBlastPointsOperator() public {
+        vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit BlastPointsOperatorUpdated(operator2);
+        proxySofa.setBlastPointsOperator(operator2);
     }
 
     function testSetProtocolFeeAndCreatorFee() public {

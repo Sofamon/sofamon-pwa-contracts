@@ -36,7 +36,8 @@ contract SofamonWearablesTest is Test {
         string category,
         string description,
         string imageURI,
-        uint256 curveAdjustmentFactor,
+        uint256 supplyFactor,
+        uint256 priceFactor,
         SofamonWearables.SaleStates state
     );
 
@@ -160,7 +161,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
@@ -171,7 +173,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -189,7 +192,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
@@ -200,7 +204,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
 
@@ -222,7 +227,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
@@ -233,7 +239,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -262,6 +269,43 @@ contract SofamonWearablesTest is Test {
         assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
+    function testBuyTotalSupplyExceeded() public {
+        bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
+
+        vm.startPrank(operator);
+        vm.expectEmit(true, true, true, true);
+        emit WearableCreated(
+            creator1,
+            wearablesSubject,
+            "test hoodie",
+            "hoodie",
+            "this is a test hoodie",
+            "hoodie image url",
+            10,
+            60,
+            SofamonWearables.SaleStates.PUBLIC
+        );
+        proxySofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                creator: creator1,
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                supplyFactor: 10,
+                curveFactor: 60
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.deal(user1, 1 ether);
+        assertEq(user1.balance, 1 ether);
+        vm.expectRevert(bytes4(keccak256("TotalSupplyExceeded()")));
+        proxySofa.getBuyPriceAfterFee(wearablesSubject, 10 ether);
+    }
+
     function testExcessivePayments() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
@@ -274,7 +318,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -300,7 +345,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PRIVATE
         );
         proxySofa.createWearable(
@@ -311,7 +357,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: false,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -336,7 +383,8 @@ contract SofamonWearablesTest is Test {
                 "hoodie",
                 "this is a test hoodie",
                 "hoodie image url",
-                50000,
+                500,
+                60,
                 SofamonWearables.SaleStates.PRIVATE
             );
             proxySofa.createWearable(
@@ -347,7 +395,8 @@ contract SofamonWearablesTest is Test {
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
                     isPublic: false,
-                    curveAdjustmentFactor: 50000
+                    supplyFactor: 500,
+                    curveFactor: 60
                 })
             );
             vm.stopPrank();
@@ -400,7 +449,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
@@ -411,7 +461,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -458,7 +509,8 @@ contract SofamonWearablesTest is Test {
                 "hoodie",
                 "this is a test hoodie",
                 "hoodie image url",
-                50000,
+                500,
+                60,
                 SofamonWearables.SaleStates.PRIVATE
             );
             proxySofa.createWearable(
@@ -469,7 +521,8 @@ contract SofamonWearablesTest is Test {
                     description: "this is a test hoodie",
                     imageURI: "hoodie image url",
                     isPublic: false,
-                    curveAdjustmentFactor: 50000
+                    supplyFactor: 500,
+                    curveFactor: 60
                 })
             );
             vm.stopPrank();
@@ -545,7 +598,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50_000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();
@@ -584,7 +638,8 @@ contract SofamonWearablesTest is Test {
             "hoodie",
             "this is a test hoodie",
             "hoodie image url",
-            50000,
+            500,
+            60,
             SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
@@ -595,7 +650,8 @@ contract SofamonWearablesTest is Test {
                 description: "this is a test hoodie",
                 imageURI: "hoodie image url",
                 isPublic: true,
-                curveAdjustmentFactor: 50000
+                supplyFactor: 500,
+                curveFactor: 60
             })
         );
         vm.stopPrank();

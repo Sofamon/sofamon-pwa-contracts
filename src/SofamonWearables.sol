@@ -308,6 +308,19 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         emit WearableSaleStateUpdated(wearablesSubject, saleState);
     }
 
+    /// @dev Sets the sale state of multiple wearables in a batch. operator only.
+    /// Emits multiple {WearableSaleStateUpdated} events.
+    function batchSetWearableSalesState(bytes32[] calldata wearablesSubjects, SaleStates saleState) external {
+        if (msg.sender != wearableOperator) {
+            revert InvalidOperator();
+        }
+
+        for (uint256 i = 0; i < wearablesSubjects.length; i++) {
+            wearables[wearablesSubjects[i]].state = saleState;
+            emit WearableSaleStateUpdated(wearablesSubjects[i], saleState);
+        }
+    }
+
     // =========================================================================
     //                          Trade Wearable Logic
     // =========================================================================

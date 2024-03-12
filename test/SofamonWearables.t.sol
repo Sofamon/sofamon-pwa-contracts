@@ -215,6 +215,46 @@ contract SofamonWearablesTest is Test {
         vm.stopPrank();
     }
 
+    function testBatchSetWearableSalesState() public {
+        bytes32 wearablesSubject1 = keccak256(abi.encode("test hoodie", "hoodie image url"));
+        bytes32 wearablesSubject2 = keccak256(abi.encode("test hoodie 2", "hoodie image url 2"));
+        bytes32[] memory wearablesSubjects = new bytes32[](2);
+        wearablesSubjects[0] = wearablesSubject1;
+        wearablesSubjects[1] = wearablesSubject2;
+
+        vm.startPrank(operator);
+        proxySofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                creator: creator1,
+                name: "test hoodie",
+                category: "hoodie",
+                description: "this is a test hoodie",
+                imageURI: "hoodie image url",
+                isPublic: true,
+                supplyFactor: 500,
+                curveFactor: 60
+            })
+        );
+        proxySofa.createWearable(
+            SofamonWearables.CreateWearableParams({
+                creator: creator1,
+                name: "test hoodie 2",
+                category: "hoodie 2",
+                description: "this is a test hoodie 2",
+                imageURI: "hoodie image url 2",
+                isPublic: true,
+                supplyFactor: 500,
+                curveFactor: 60
+            })
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit WearableSaleStateUpdated(wearablesSubject1, SofamonWearables.SaleStates.PRIVATE);
+        emit WearableSaleStateUpdated(wearablesSubject2, SofamonWearables.SaleStates.PRIVATE);
+        proxySofa.batchSetWearableSalesState(wearablesSubjects, SofamonWearables.SaleStates.PRIVATE);
+        vm.stopPrank();
+    }
+
     function testBuyWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 

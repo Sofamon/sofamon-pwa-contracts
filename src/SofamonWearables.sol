@@ -16,6 +16,7 @@ error InsufficientBaseUnit();
 error AmountNotMultipleOfBaseUnit();
 error InvalidTotalSupply();
 error InvalidCurveFactor();
+error InvalidInitialPriceFactor();
 error WearableAlreadyCreated();
 error WearableNotCreated();
 error InvalidSaleState();
@@ -90,8 +91,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         string category,
         string description,
         string imageURI,
-        uint256 supplyFactor,
-        uint256 curveFactor,
+        WearableFactors factors,
         SaleStates state
     );
 
@@ -111,6 +111,12 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
+    struct WearableFactors {
+        uint256 supplyFactor;
+        uint256 curveFactor;
+        uint256 initialPriceFactor;
+    }
+
     struct CreateWearableParams {
         address creator;
         string name;
@@ -120,6 +126,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         bool isPublic;
         uint256 supplyFactor;
         uint256 curveFactor;
+        uint256 initialPriceFactor;
     }
 
     struct Wearable {
@@ -128,8 +135,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         string category;
         string description;
         string imageURI;
-        uint256 supplyFactor;
-        uint256 curveFactor;
+        WearableFactors factors;
         SaleStates state;
     }
 
@@ -260,6 +266,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             if (params.curveFactor < 1 || params.curveFactor > 1000) {
                 revert InvalidCurveFactor();
             }
+
+            if (params.initialPriceFactor < 100 || params.initialPriceFactor > 1000) {
+                revert InvalidInitialPriceFactor();
+            }
         }
 
         // Generate wearable subject
@@ -271,16 +281,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         SaleStates state = params.isPublic ? SaleStates.PUBLIC : SaleStates.PRIVATE;
 
         // Update wearables mapping
-        wearables[wearablesSubject] = Wearable(
-            params.creator,
-            params.name,
-            params.category,
-            params.description,
-            params.imageURI,
-            params.supplyFactor,
-            params.curveFactor,
-            state
-        );
+        WearableFactors memory factors =
+            WearableFactors(params.supplyFactor, params.curveFactor, params.initialPriceFactor);
+        wearables[wearablesSubject] =
+            Wearable(params.creator, params.name, params.category, params.description, params.imageURI, factors, state);
 
         emit WearableCreated(
             params.creator,
@@ -289,8 +293,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             params.category,
             params.description,
             params.imageURI,
-            params.supplyFactor,
-            params.curveFactor,
+            factors,
             state
         );
     }
@@ -304,6 +307,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         if (msg.sender != wearableOperator) {
             revert InvalidOperator();
         }
+
         wearables[wearablesSubject].state = saleState;
         emit WearableSaleStateUpdated(wearablesSubject, saleState);
     }
@@ -325,16 +329,26 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     //                          Trade Wearable Logic
     // =========================================================================
     /// @dev Returns the curve of `x`
-    function _curve(uint256 x, uint256 totalSupply, uint256 curveFactor) private pure returns (uint256) {
-        return ((totalSupply * curveFactor) / (totalSupply - x) - (totalSupply * curveFactor) / totalSupply) * 1 ether;
-    }
-
-    /// @dev Returns the price based on `supply` and `amount`.
-    function getPrice(uint256 supply, uint256 amount, uint256 totalSupply, uint256 curveFactor, bool isBuy)
-        public
+    function _curve(uint256 x, uint256 totalSupply, uint256 curveFactor, uint256 initialPriceFactor)
+        private
         pure
         returns (uint256)
     {
+        return (
+            (totalSupply * curveFactor) / (totalSupply - x) - (totalSupply * curveFactor) / totalSupply
+                - initialPriceFactor / 1000 * x
+        ) * 1 ether;
+    }
+
+    /// @dev Returns the price based on `supply` and `amount`.
+    function getPrice(
+        uint256 supply,
+        uint256 amount,
+        uint256 totalSupply,
+        uint256 curveFactor,
+        uint256 initialPriceFactor,
+        bool isBuy
+    ) public pure returns (uint256) {
         if (isBuy && supply + amount >= totalSupply) {
             revert TotalSupplyExceeded();
         }
@@ -343,21 +357,33 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             revert TotalSupplyExceeded();
         }
 
-        return _curve(supply + amount, totalSupply, curveFactor) - _curve(supply, totalSupply, curveFactor);
+        return _curve(supply + amount, totalSupply, curveFactor, initialPriceFactor)
+            - _curve(supply, totalSupply, curveFactor, initialPriceFactor);
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject`.
     function getBuyPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
-        uint256 supplyFactor = wearables[wearablesSubject].supplyFactor;
-        uint256 curveFactor = wearables[wearablesSubject].curveFactor;
-        return getPrice(wearablesSupply[wearablesSubject], amount, supplyFactor * 1 ether, curveFactor, true);
+        uint256 supplyFactor = wearables[wearablesSubject].factors.supplyFactor;
+        uint256 curveFactor = wearables[wearablesSubject].factors.curveFactor;
+        uint256 initialPriceFactor = wearables[wearablesSubject].factors.initialPriceFactor;
+        return getPrice(
+            wearablesSupply[wearablesSubject], amount, supplyFactor * 1 ether, curveFactor, initialPriceFactor, true
+        );
     }
 
     /// @dev Returns the sell price of `amount` of `wearablesSubject`.
     function getSellPrice(bytes32 wearablesSubject, uint256 amount) public view returns (uint256) {
-        uint256 supplyFactor = wearables[wearablesSubject].supplyFactor;
-        uint256 curveFactor = wearables[wearablesSubject].curveFactor;
-        return getPrice(wearablesSupply[wearablesSubject] - amount, amount, supplyFactor * 1 ether, curveFactor, false);
+        uint256 supplyFactor = wearables[wearablesSubject].factors.supplyFactor;
+        uint256 curveFactor = wearables[wearablesSubject].factors.curveFactor;
+        uint256 initialPriceFactor = wearables[wearablesSubject].factors.initialPriceFactor;
+        return getPrice(
+            wearablesSupply[wearablesSubject] - amount,
+            amount,
+            supplyFactor * 1 ether,
+            curveFactor,
+            initialPriceFactor,
+            false
+        );
     }
 
     /// @dev Returns the buy price of `amount` of `wearablesSubject` after fee.
@@ -465,8 +491,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         uint256 price = getPrice(
             supply,
             amount,
-            wearables[wearablesSubject].supplyFactor * 1 ether,
-            wearables[wearablesSubject].curveFactor,
+            wearables[wearablesSubject].factors.supplyFactor * 1 ether,
+            wearables[wearablesSubject].factors.curveFactor,
+            wearables[wearablesSubject].factors.initialPriceFactor,
             true
         );
 
@@ -570,8 +597,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         uint256 price = getPrice(
             supply - amount,
             amount,
-            wearables[wearablesSubject].supplyFactor * 1 ether,
-            wearables[wearablesSubject].curveFactor,
+            wearables[wearablesSubject].factors.supplyFactor * 1 ether,
+            wearables[wearablesSubject].factors.curveFactor,
+            wearables[wearablesSubject].factors.initialPriceFactor,
             false
         );
 

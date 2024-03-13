@@ -6,13 +6,14 @@ The Sofamon wearable collection is governed by a bonding curve to determine its 
 ### Bonding Curve Equation
 The price and supply relationship follows the bonding curve equation:
 
-$Y = \dfrac{c_{supply} \times c_{price}}{c_{supply}-x}-\dfrac{c_{supply} \times c_{price}}{c_{supply}}$ 
+$Y = \dfrac{c_{supply} \times c_{price}}{c_{supply}-x}-\dfrac{c_{supply} \times c_{price}}{c_{supply}} - \dfrac{c_{initialPrice}}{1000} \times x$ 
 
 Where:
 - $X$ is the total supply of the wearables, which can range from 0 to $c_{supply}$ but never reach $c_{supply}$.
 - $Y$ is  the cumulative price (in Ethers) of a Sofamon wearable, excluding any creator and protocol fees, for a given supply $X$.
 - $c_{supply}$ is the total supply of the wearable, and the asymptote of the bonding curve. 
 - $c_{price}$ is the curve factor, uniquely set during the creation of each wearable based on wearable's rarity and supply.
+- $c_{initialPrice}$ is the initial price adjustment factor (a horizontal shift of the derivative of the bonding curve) to help determine the initial price of the sofamon wearable. 
 
 ### Price Calculation
 To calculate the price required for a purchase, the equation used is:

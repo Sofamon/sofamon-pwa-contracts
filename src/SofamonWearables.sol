@@ -89,7 +89,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         bytes32 subject,
         string name,
         string category,
-        string description,
         string imageURI,
         WearableFactors factors,
         SaleStates state
@@ -121,7 +120,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         address creator;
         string name;
         string category;
-        string description;
         string imageURI;
         bool isPublic;
         uint256 supplyFactor;
@@ -133,7 +131,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         address creator;
         string name;
         string category;
-        string description;
         string imageURI;
         WearableFactors factors;
         SaleStates state;
@@ -284,14 +281,13 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         WearableFactors memory factors =
             WearableFactors(params.supplyFactor, params.curveFactor, params.initialPriceFactor);
         wearables[wearablesSubject] =
-            Wearable(params.creator, params.name, params.category, params.description, params.imageURI, factors, state);
+            Wearable(params.creator, params.name, params.category, params.imageURI, factors, state);
 
         emit WearableCreated(
             params.creator,
             wearablesSubject,
             params.name,
             params.category,
-            params.description,
             params.imageURI,
             factors,
             state

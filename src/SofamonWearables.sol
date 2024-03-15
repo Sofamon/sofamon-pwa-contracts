@@ -284,13 +284,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             Wearable(params.creator, params.name, params.category, params.imageURI, factors, state);
 
         emit WearableCreated(
-            params.creator,
-            wearablesSubject,
-            params.name,
-            params.category,
-            params.imageURI,
-            factors,
-            state
+            params.creator, wearablesSubject, params.name, params.category, params.imageURI, factors, state
         );
     }
 
@@ -330,10 +324,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         pure
         returns (uint256)
     {
-        return (
-            (totalSupply * curveFactor) / (totalSupply - x) - (totalSupply * curveFactor) / totalSupply
-                - initialPriceFactor / 1000 * x
-        ) * 1 ether;
+        return (totalSupply * curveFactor * 1 ether) / (totalSupply - x)
+            - curveFactor * 1 ether - initialPriceFactor * x / 1000;
     }
 
     /// @dev Returns the price based on `supply` and `amount`.

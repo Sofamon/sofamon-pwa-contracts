@@ -5,15 +5,9 @@ import "forge-std/Test.sol";
 import "../src/SofamonWearables.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TestBlast} from "../test/TestBlast.sol";
-import {TestBlastPoints} from "../test/TestBlastPoints.sol";
 
 contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
-
-    event BlastGovernorUpdated(address governor);
-
-    event BlastPointsOperatorUpdated(address operator);
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
@@ -59,13 +53,9 @@ contract SofamonWearablesTest is Test {
     uint256 internal signer1Privatekey = 0x1;
     uint256 internal signer2Privatekey = 0x2;
 
-    address BLAST = 0x4300000000000000000000000000000000000002;
-    address BLAST_POINTS = 0x2fc95838c71e76ec69ff817983BFf17c710F34E0;
-
     address owner = address(0x11);
     address operator = address(0x12);
     address operator2 = address(0x13);
-    address governor = address(0x14);
     address protocolFeeDestination = address(0x22);
     address signer1 = vm.addr(signer1Privatekey);
     address signer2 = vm.addr(signer2Privatekey);
@@ -75,16 +65,11 @@ contract SofamonWearablesTest is Test {
     address user2 = address(0xd);
 
     function setUp() public {
-        TestBlast testBlast = new TestBlast();
-        TestBlastPoints testBlastPoints = new TestBlastPoints();
-        vm.etch(BLAST, address(testBlast).code);
-        vm.etch(BLAST_POINTS, address(testBlastPoints).code);
-
         vm.startPrank(owner);
         SofamonWearables sofa = new SofamonWearables();
         proxy = new ERC1967Proxy(address(sofa), "");
         proxySofa = SofamonWearables(address(proxy));
-        proxySofa.initialize(owner, owner, operator, signer1);
+        proxySofa.initialize(operator, signer1);
     }
 
     function testSofamonWearablesUpgradable() public {
@@ -95,20 +80,6 @@ contract SofamonWearablesTest is Test {
         SofamonWearables proxySofav2 = SofamonWearables(address(proxy));
         vm.stopPrank();
         assertEq(proxySofav2.owner(), owner);
-    }
-
-    function testSetBlastGovernor() public {
-        vm.startPrank(owner);
-        vm.expectEmit(true, true, true, true);
-        emit BlastGovernorUpdated(governor);
-        proxySofa.setBlastGovernor(governor);
-    }
-
-    function testSetBlastPointsOperator() public {
-        vm.startPrank(owner);
-        vm.expectEmit(true, true, true, true);
-        emit BlastPointsOperatorUpdated(operator2);
-        proxySofa.setBlastPointsOperator(operator2);
     }
 
     function testSetProtocolFeeAndCreatorFee() public {

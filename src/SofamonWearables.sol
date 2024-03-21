@@ -5,8 +5,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {IBlast} from "./IBlast.sol";
-import {IBlastPoints} from "./IBlastPoints.sol";
 
 // Errors
 error InvalidFeePercent();
@@ -63,14 +61,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     // Address that signs messages used for creating wearables
     address public wearableOperator;
-
-    // Blast interface
-    IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
-    IBlastPoints public constant BLAST_POINTS = IBlastPoints(0x2fc95838c71e76ec69ff817983BFf17c710F34E0);
-
-    event BlastGovernorUpdated(address governor);
-
-    event BlastPointsOperatorUpdated(address operator);
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
@@ -152,7 +142,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _governor, address _pointsOperator, address _wearableOperator, address _signer)
+    function initialize(address _wearableOperator, address _signer)
         public
         initializer
     {
@@ -162,38 +152,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         wearableOperator = _wearableOperator;
         wearableSigner = _signer;
 
-        // Configure Blast automatic yield
-        BLAST.configureAutomaticYield();
-
-        // Configure Blast claimable gas fee
-        BLAST.configureClaimableGas();
-
-        // Configure Blast governor
-        BLAST.configureGovernor(_governor);
-
-        // Configure Blast Points governor
-        BLAST_POINTS.configurePointsOperator(_pointsOperator);
-
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
-    }
-
-    // =========================================================================
-    //                          Blast Settings
-    // =========================================================================
-
-    // @dev Sets the blast governor address.
-    // Emits a {BlastGovernorUpdated} event.
-    function setBlastGovernor(address _governor) external onlyOwner {
-        BLAST.configureGovernor(_governor);
-        emit BlastGovernorUpdated(_governor);
-    }
-
-    // @dev Sets the blast points operator address.
-    // Emits a {BlastPointsOperatorUpdated} event.
-    function setBlastPointsOperator(address _operator) external onlyOwner {
-        BLAST_POINTS.configurePointsOperator(_operator);
-        emit BlastPointsOperatorUpdated(_operator);
     }
 
     // =========================================================================

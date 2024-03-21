@@ -51,6 +51,11 @@ To deploy on Blast testnet, run
 forge script script/DeploySofamonWearables.s.sol --rpc-url https://sepolia.blast.io --broadcast --skip-simulation --verify --etherscan-api-key "verifyContract"
 ```
 
+To deploy on Base testnet, run
+```
+forge script script/DeploySofamonWearables.s.sol --rpc-url https://sepolia.base.org --broadcast --skip-simulation
+```
+
 To verify, run
 ```
 forge verify-contract <contract_addr> src/SofamonWearables.sol:SofamonWearables --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan' --etherscan-api-key "verifyContract" --num-of-optimizations 200

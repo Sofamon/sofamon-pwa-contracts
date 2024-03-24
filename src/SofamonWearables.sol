@@ -129,10 +129,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     // wearablesSubject => Wearable
     mapping(bytes32 => Wearable) public wearables;
 
-    // wearablesSubject => (Holder => Balance)
+    // wearablesSubject => (holder => balance)
     mapping(bytes32 => mapping(address => uint256)) public wearablesBalance;
 
-    // wearablesSubject => Supply
+    // wearablesSubject => supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
     // userAddress => nonce

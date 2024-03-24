@@ -142,10 +142,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _wearableOperator, address _signer)
-        public
-        initializer
-    {
+    function initialize(address _wearableOperator, address _signer) public initializer {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
@@ -284,8 +281,8 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         pure
         returns (uint256)
     {
-        return (totalSupply * curveFactor * 1 ether) / (totalSupply - x)
-            - curveFactor * 1 ether - initialPriceFactor * x / 1000;
+        return (totalSupply * curveFactor * 1 ether) / (totalSupply - x) - curveFactor * 1 ether
+            - initialPriceFactor * x / 1000;
     }
 
     /// @dev Returns the price based on `supply` and `amount`.

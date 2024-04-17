@@ -22,6 +22,7 @@ error TotalSupplyExceeded();
 error InsufficientPayment();
 error ExcessivePayment();
 error SendFundsFailed();
+error RefundFailed();
 error InsufficientHoldings();
 error TransferToZeroAddress();
 error IncorrectSender();
@@ -453,11 +454,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             revert InsufficientPayment();
         }
 
-        // Check if user has excessive funds
-        if (msg.value > price + protocolFee + creatorFee) {
-            revert ExcessivePayment();
-        }
-
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] + amount;
         wearablesSupply[wearablesSubject] = supply + amount;
@@ -477,6 +473,17 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Check if all funds were sent successfully
         if (!(success1 && success2)) revert SendFundsFailed();
+        
+        {
+            uint256 excessPayment = msg.value - price - protocolFee - creatorFee;
+            // Refund excess payment to user
+            if (excessPayment > 0) {
+                (bool success3,) = msg.sender.call{value: excessPayment}("");
+                if (!success3) {
+                    revert RefundFailed();
+                }
+            }
+        }
     }
 
     /// @dev Sells `amount` of `wearablesSubject`.

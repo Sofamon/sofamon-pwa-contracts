@@ -6,7 +6,7 @@ import "../src/SofamonWearablesV2.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract SofamonWearablesV2Test is Test {
+contract SofamonWearablesTest is Test {
     using ECDSA for bytes32;
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
@@ -19,7 +19,7 @@ contract SofamonWearablesV2Test is Test {
 
     event WearableOperatorUpdated(address operator);
 
-    event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearablesV2.SaleStates saleState);
+    event WearableSaleStateUpdated(bytes32 wearablesSubject, SofamonWearables.SaleStates saleState);
 
     event NonceUpdated(address user, uint256 nonce);
 
@@ -29,8 +29,8 @@ contract SofamonWearablesV2Test is Test {
         string name,
         string category,
         string imageURI,
-        SofamonWearablesV2.WearableFactors factors,
-        SofamonWearablesV2.SaleStates state
+        SofamonWearables.WearableFactors factors,
+        SofamonWearables.SaleStates state
     );
 
     event Trade(
@@ -48,7 +48,7 @@ contract SofamonWearablesV2Test is Test {
     event WearableTransferred(address from, address to, bytes32 subject, uint256 amount);
 
     ERC1967Proxy public proxy;
-    SofamonWearablesV2 public proxySofa;
+    SofamonWearables public proxySofa;
 
     uint256 internal signer1Privatekey = 0x1;
     uint256 internal signer2Privatekey = 0x2;
@@ -66,18 +66,18 @@ contract SofamonWearablesV2Test is Test {
 
     function setUp() public {
         vm.startPrank(owner);
-        SofamonWearablesV2 sofa = new SofamonWearablesV2();
+        SofamonWearables sofa = new SofamonWearables();
         proxy = new ERC1967Proxy(address(sofa), "");
-        proxySofa = SofamonWearablesV2(address(proxy));
+        proxySofa = SofamonWearables(address(proxy));
         proxySofa.initialize(operator, signer1);
     }
 
-    function testSofamonWearablesV2Upgradable() public {
+    function testSofamonWearablesUpgradable() public {
         // deploy new sofa contract
         vm.startPrank(owner);
-        SofamonWearablesV2 sofav2 = new SofamonWearablesV2();
-        SofamonWearablesV2(address(proxy)).upgradeTo(address(sofav2));
-        SofamonWearablesV2 proxySofav2 = SofamonWearablesV2(address(proxy));
+        SofamonWearables sofav2 = new SofamonWearables();
+        SofamonWearables(address(proxy)).upgradeTo(address(sofav2));
+        SofamonWearables proxySofav2 = SofamonWearables(address(proxy));
         vm.stopPrank();
         assertEq(proxySofav2.owner(), owner);
     }
@@ -122,8 +122,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -132,10 +132,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -153,8 +153,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -163,10 +163,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -179,8 +179,8 @@ contract SofamonWearablesV2Test is Test {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit WearableSaleStateUpdated(wearablesSubject, SofamonWearablesV2.SaleStates.PRIVATE);
-        proxySofa.setWearableSalesState(wearablesSubject, SofamonWearablesV2.SaleStates.PRIVATE);
+        emit WearableSaleStateUpdated(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
+        proxySofa.setWearableSalesState(wearablesSubject, SofamonWearables.SaleStates.PRIVATE);
         vm.stopPrank();
     }
 
@@ -193,7 +193,7 @@ contract SofamonWearablesV2Test is Test {
 
         vm.startPrank(operator);
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -205,7 +205,7 @@ contract SofamonWearablesV2Test is Test {
             })
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie 2",
                 category: "hoodie 2",
@@ -218,9 +218,9 @@ contract SofamonWearablesV2Test is Test {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit WearableSaleStateUpdated(wearablesSubject1, SofamonWearablesV2.SaleStates.PRIVATE);
-        emit WearableSaleStateUpdated(wearablesSubject2, SofamonWearablesV2.SaleStates.PRIVATE);
-        proxySofa.batchSetWearableSalesState(wearablesSubjects, SofamonWearablesV2.SaleStates.PRIVATE);
+        emit WearableSaleStateUpdated(wearablesSubject1, SofamonWearables.SaleStates.PRIVATE);
+        emit WearableSaleStateUpdated(wearablesSubject2, SofamonWearables.SaleStates.PRIVATE);
+        proxySofa.batchSetWearableSalesState(wearablesSubjects, SofamonWearables.SaleStates.PRIVATE);
         vm.stopPrank();
     }
 
@@ -228,8 +228,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -238,10 +238,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -282,8 +282,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 10, curveFactor: 200, initialPriceFactor: 200});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 10, curveFactor: 200, initialPriceFactor: 200});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -292,10 +292,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -320,7 +320,7 @@ contract SofamonWearablesV2Test is Test {
 
         vm.startPrank(operator);
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -346,8 +346,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -356,10 +356,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PRIVATE
+            SofamonWearables.SaleStates.PRIVATE
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -384,8 +384,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
         {
             vm.startPrank(operator);
-            SofamonWearablesV2.WearableFactors memory factors =
-                SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+            SofamonWearables.WearableFactors memory factors =
+                SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -394,10 +394,10 @@ contract SofamonWearablesV2Test is Test {
                 "hoodie",
                 "hoodie image url",
                 factors,
-                SofamonWearablesV2.SaleStates.PRIVATE
+                SofamonWearables.SaleStates.PRIVATE
             );
             proxySofa.createWearable(
-                SofamonWearablesV2.CreateWearableParams({
+                SofamonWearables.CreateWearableParams({
                     creator: creator1,
                     name: "test hoodie",
                     category: "hoodie",
@@ -450,8 +450,8 @@ contract SofamonWearablesV2Test is Test {
     function testSellWearables() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -460,10 +460,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -510,8 +510,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
         {
             vm.startPrank(operator);
-            SofamonWearablesV2.WearableFactors memory factors =
-                SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+            SofamonWearables.WearableFactors memory factors =
+                SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
             vm.expectEmit(true, true, true, true);
             emit WearableCreated(
                 creator1,
@@ -520,10 +520,10 @@ contract SofamonWearablesV2Test is Test {
                 "hoodie",
                 "hoodie image url",
                 factors,
-                SofamonWearablesV2.SaleStates.PRIVATE
+                SofamonWearables.SaleStates.PRIVATE
             );
             proxySofa.createWearable(
-                SofamonWearablesV2.CreateWearableParams({
+                SofamonWearables.CreateWearableParams({
                     creator: creator1,
                     name: "test hoodie",
                     category: "hoodie",
@@ -600,7 +600,7 @@ contract SofamonWearablesV2Test is Test {
 
         vm.startPrank(operator);
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",
@@ -639,8 +639,8 @@ contract SofamonWearablesV2Test is Test {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
-        SofamonWearablesV2.WearableFactors memory factors =
-            SofamonWearablesV2.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
+        SofamonWearables.WearableFactors memory factors =
+            SofamonWearables.WearableFactors({supplyFactor: 800, curveFactor: 200, initialPriceFactor: 245});
         vm.expectEmit(true, true, true, true);
         emit WearableCreated(
             creator1,
@@ -649,10 +649,10 @@ contract SofamonWearablesV2Test is Test {
             "hoodie",
             "hoodie image url",
             factors,
-            SofamonWearablesV2.SaleStates.PUBLIC
+            SofamonWearables.SaleStates.PUBLIC
         );
         proxySofa.createWearable(
-            SofamonWearablesV2.CreateWearableParams({
+            SofamonWearables.CreateWearableParams({
                 creator: creator1,
                 name: "test hoodie",
                 category: "hoodie",

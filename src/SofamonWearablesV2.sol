@@ -31,7 +31,7 @@ error IncorrectSender();
  * @title SofamonWearables
  * @author lixingyu.eth <@0xlxy>
  */
-contract SofamonWearablesV2 is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
+contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using ECDSA for bytes32;
 
     enum SaleStates {

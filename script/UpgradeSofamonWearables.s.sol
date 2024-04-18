@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import {SofamonWearables} from "../src/SofamonWearables.sol";
-import {SofamonWearablesV2} from "../src/SofamonWearablesV2.sol";
+import {SofamonWearables as SofamonWearablesV2} from "../src/SofamonWearablesV2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SofamonWearablesScript is Script {

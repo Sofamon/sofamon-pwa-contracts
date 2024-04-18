@@ -29,7 +29,13 @@ price = $Y(X_2) - Y(X_1)$
 - A total of 1000 fractional shares constitutes one full wearable share of the Sofamon collection.
 
 ## Note
-Update made since the first audit:
+
+### 4/18/2024 - Update made since the second audit:
+- updated the `_buyWearables` function. instead of revert with the error `ExcessivePayment`, we introduced a refund logic, which serves as a max slippage to mitigate transactions failed errors due to infuccicient payment when multiple users try to make purchases as the same time during the pre-sale. Code update: https://github.com/Sofamon/sofamon-pwa-contracts/commit/6af00565d60b01a6a3e890e2c2c1bcb386588c18
+- added a script `UpgradeSofamonWearables.sol` to upgrade the implementation contract with the new refund logic. the new implementation contract's name remains the name, `SofamonWearables`. 
+
+
+### 3/8/2024 - Update made since the first audit:
 - updated the bonding curve with an asymptote (the supply cap) for each wearable. instead of `curveAdjustmentFactor`, we introduced `supplyFactor` (the supply cap) and the `curveFactor` (the adjustment factor) to the new bonding curve.
 - added an `wearableOperator` role and only the `wearableOperator` can create wearable and change the wearable sale state. we introduced this primarily for access control in our backend. the contract owner's private key won't be exposed to our backend, but the operator and signer will. 
 - renamed old `operator` to `pointsOperator` for better clarity.
@@ -37,26 +43,3 @@ Update made since the first audit:
 - introduced setter function `setBlastGovernor` and `setBlastPointsOperator` for Blast's governor and Blast points operator. 
 - introduced a `creator` param when creating a new wearable.
 - renamed `createSigner` to `wearableSigner`.
-
-
-To deplicate the `Failed to estimate gas` error locally,
-run
-```
-anvil
-forge script script/DeploySofamonWearables.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --skip-simulation
-```
-
-To deploy on Blast testnet, run
-```
-forge script script/DeploySofamonWearables.s.sol --rpc-url https://sepolia.blast.io --broadcast --skip-simulation --verify --etherscan-api-key "verifyContract"
-```
-
-To deploy on Base testnet, run
-```
-forge script script/DeploySofamonWearables.s.sol --rpc-url https://sepolia.base.org --broadcast --skip-simulation
-```
-
-To verify, run
-```
-forge verify-contract <contract_addr> src/SofamonWearables.sol:SofamonWearables --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan' --etherscan-api-key "verifyContract" --num-of-optimizations 200
-```

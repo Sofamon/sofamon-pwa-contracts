@@ -421,7 +421,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
                 revert InvalidSignature();
             }
 
-            nonces[msg.sender] += 1;
+            ++nonces[msg.sender];
 
             emit NonceUpdated(msg.sender, nonces[msg.sender]);
         }
@@ -605,13 +605,15 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Check if message sender is the from address
         if (_msgSender() != from) revert IncorrectSender();
 
+        uint256 fromBalance = wearablesBalance[wearablesSubject][from];
+
         // Check if user has enough wearables for transfer
-        if (wearablesBalance[wearablesSubject][from] < amount) {
+        if (fromBalance < amount) {
             revert InsufficientHoldings();
         }
 
         // Update wearables balance and supply
-        wearablesBalance[wearablesSubject][from] = wearablesBalance[wearablesSubject][from] - amount;
+        wearablesBalance[wearablesSubject][from] = fromBalance - amount;
         wearablesBalance[wearablesSubject][to] = wearablesBalance[wearablesSubject][to] + amount;
 
         emit WearableTransferred(from, to, wearablesSubject, amount);

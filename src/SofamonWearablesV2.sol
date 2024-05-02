@@ -435,6 +435,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     /// @dev Internal buys `amount` of `wearablesSubject`.
     function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
+        uint256 newSupply = supply + amount;
 
         // Get buy price before fee
         uint256 price = getPrice(
@@ -458,15 +459,13 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         }
 
         // Update wearables balance and supply
-        wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] + amount;
-        wearablesSupply[wearablesSubject] = supply + amount;
+        wearablesBalance[wearablesSubject][msg.sender] += amount;
+        wearablesSupply[wearablesSubject] = newSupply;
 
         // Get creator fee destination
         address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(
-            msg.sender, wearablesSubject, true, isPublic, amount, price, protocolFee, creatorFee, supply + amount
-        );
+        emit Trade(msg.sender, wearablesSubject, true, isPublic, amount, price, protocolFee, creatorFee, newSupply);
 
         // Send protocol fee to protocol fee destination
         (bool success1,) = protocolFeeDestination.call{value: protocolFee}("");
@@ -612,6 +611,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Check if message sender is the from address
         if (_msgSender() != from) revert IncorrectSender();
 
+        // Get sender's balance
         uint256 fromBalance = wearablesBalance[wearablesSubject][from];
 
         // Check if user has enough wearables for transfer
@@ -621,7 +621,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][from] = fromBalance - amount;
-        wearablesBalance[wearablesSubject][to] = wearablesBalance[wearablesSubject][to] + amount;
+        wearablesBalance[wearablesSubject][to] += amount;
 
         emit WearableTransferred(from, to, wearablesSubject, amount);
     }

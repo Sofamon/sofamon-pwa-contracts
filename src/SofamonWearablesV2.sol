@@ -267,9 +267,12 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             revert InvalidOperator();
         }
 
-        for (uint256 i = 0; i < wearablesSubjects.length; i++) {
+        for (uint256 i = 0; i < wearablesSubjects.length;) {
             wearables[wearablesSubjects[i]].state = saleState;
             emit WearableSaleStateUpdated(wearablesSubjects[i], saleState);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -533,7 +536,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
                 revert InvalidSignature();
             }
 
-            nonces[msg.sender] += 1;
+            ++nonces[msg.sender];
 
             emit NonceUpdated(msg.sender, nonces[msg.sender]);
         }

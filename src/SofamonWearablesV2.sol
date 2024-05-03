@@ -426,7 +426,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
             ++nonces[msg.sender];
 
-            emit NonceUpdated(msg.sender, nonces[msg.sender]);
+            emit NonceUpdated(msg.sender, nonce + 1);
         }
 
         _buyWearables(wearablesSubject, amount, false);
@@ -537,7 +537,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
             ++nonces[msg.sender];
 
-            emit NonceUpdated(msg.sender, nonces[msg.sender]);
+            emit NonceUpdated(msg.sender, nonce + 1);
         }
 
         _sellWearables(wearablesSubject, amount, false);

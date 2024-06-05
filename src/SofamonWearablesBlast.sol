@@ -24,6 +24,7 @@ error TotalSupplyExceeded();
 error InsufficientPayment();
 error ExcessivePayment();
 error SendFundsFailed();
+error RefundFailed();
 error InsufficientHoldings();
 error TransferToZeroAddress();
 error IncorrectSender();

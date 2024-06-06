@@ -69,10 +69,6 @@ contract SofamonWearablesBlast is Initializable, Ownable2StepUpgradeable, UUPSUp
     IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
     IBlastPoints public constant BLAST_POINTS = IBlastPoints(0x2fc95838c71e76ec69ff817983BFf17c710F34E0);
 
-    event BlastGovernorUpdated(address governor);
-
-    event BlastPointsOperatorUpdated(address operator);
-
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
     event ProtocolFeePercentUpdated(uint256 feePercent);
@@ -177,24 +173,6 @@ contract SofamonWearablesBlast is Initializable, Ownable2StepUpgradeable, UUPSUp
 
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
-    }
-
-    // =========================================================================
-    //                          Blast Settings
-    // =========================================================================
-
-    // @dev Sets the blast governor address.
-    // Emits a {BlastGovernorUpdated} event.
-    function setBlastGovernor(address _governor) external onlyOwner {
-        BLAST.configureGovernor(_governor);
-        emit BlastGovernorUpdated(_governor);
-    }
-
-    // @dev Sets the blast points operator address.
-    // Emits a {BlastPointsOperatorUpdated} event.
-    function setBlastPointsOperator(address _operator) external onlyOwner {
-        BLAST_POINTS.configurePointsOperator(_operator);
-        emit BlastPointsOperatorUpdated(_operator);
     }
 
     // =========================================================================

@@ -267,9 +267,12 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             revert InvalidOperator();
         }
 
-        for (uint256 i = 0; i < wearablesSubjects.length; i++) {
+        for (uint256 i = 0; i < wearablesSubjects.length;) {
             wearables[wearablesSubjects[i]].state = saleState;
             emit WearableSaleStateUpdated(wearablesSubjects[i], saleState);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -421,9 +424,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
                 revert InvalidSignature();
             }
 
-            nonces[msg.sender] += 1;
+            ++nonces[msg.sender];
 
-            emit NonceUpdated(msg.sender, nonces[msg.sender]);
+            emit NonceUpdated(msg.sender, nonce + 1);
         }
 
         _buyWearables(wearablesSubject, amount, false);
@@ -432,6 +435,7 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     /// @dev Internal buys `amount` of `wearablesSubject`.
     function _buyWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
+        uint256 newSupply = supply + amount;
 
         // Get buy price before fee
         uint256 price = getPrice(
@@ -455,15 +459,13 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         }
 
         // Update wearables balance and supply
-        wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] + amount;
-        wearablesSupply[wearablesSubject] = supply + amount;
+        wearablesBalance[wearablesSubject][msg.sender] += amount;
+        wearablesSupply[wearablesSubject] = newSupply;
 
         // Get creator fee destination
         address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(
-            msg.sender, wearablesSubject, true, isPublic, amount, price, protocolFee, creatorFee, supply + amount
-        );
+        emit Trade(msg.sender, wearablesSubject, true, isPublic, amount, price, protocolFee, creatorFee, newSupply);
 
         // Send protocol fee to protocol fee destination
         (bool success1,) = protocolFeeDestination.call{value: protocolFee}("");
@@ -533,9 +535,9 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
                 revert InvalidSignature();
             }
 
-            nonces[msg.sender] += 1;
+            ++nonces[msg.sender];
 
-            emit NonceUpdated(msg.sender, nonces[msg.sender]);
+            emit NonceUpdated(msg.sender, nonce + 1);
         }
 
         _sellWearables(wearablesSubject, amount, false);
@@ -545,9 +547,12 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     function _sellWearables(bytes32 wearablesSubject, uint256 amount, bool isPublic) internal {
         uint256 supply = wearablesSupply[wearablesSubject];
 
+        // Get new supply
+        uint256 newSupply = supply - amount;
+
         // Get sell price before fee
         uint256 price = getPrice(
-            supply - amount,
+            newSupply,
             amount,
             wearables[wearablesSubject].factors.supplyFactor * 1 ether,
             wearables[wearablesSubject].factors.curveFactor,
@@ -561,21 +566,22 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Get creator fee
         uint256 creatorFee = _getCreatorFee(price);
 
+        // Get seller balance
+        uint256 sellerBalance = wearablesBalance[wearablesSubject][msg.sender];
+
         // Check if user has enough amount for sale
-        if (wearablesBalance[wearablesSubject][msg.sender] < amount) {
+        if (sellerBalance < amount) {
             revert InsufficientHoldings();
         }
 
         // Update wearables balance and supply
-        wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] - amount;
-        wearablesSupply[wearablesSubject] = supply - amount;
+        wearablesBalance[wearablesSubject][msg.sender] = sellerBalance - amount;
+        wearablesSupply[wearablesSubject] = newSupply;
 
         // Get creator fee destination
         address creatorFeeDestination = wearables[wearablesSubject].creator;
 
-        emit Trade(
-            msg.sender, wearablesSubject, false, isPublic, amount, price, protocolFee, creatorFee, supply - amount
-        );
+        emit Trade(msg.sender, wearablesSubject, false, isPublic, amount, price, protocolFee, creatorFee, newSupply);
 
         // Send sell funds to seller
         (bool success1,) = msg.sender.call{value: price - protocolFee - creatorFee}("");
@@ -605,14 +611,17 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         // Check if message sender is the from address
         if (_msgSender() != from) revert IncorrectSender();
 
+        // Get sender's balance
+        uint256 fromBalance = wearablesBalance[wearablesSubject][from];
+
         // Check if user has enough wearables for transfer
-        if (wearablesBalance[wearablesSubject][from] < amount) {
+        if (fromBalance < amount) {
             revert InsufficientHoldings();
         }
 
         // Update wearables balance and supply
-        wearablesBalance[wearablesSubject][from] = wearablesBalance[wearablesSubject][from] - amount;
-        wearablesBalance[wearablesSubject][to] = wearablesBalance[wearablesSubject][to] + amount;
+        wearablesBalance[wearablesSubject][from] = fromBalance - amount;
+        wearablesBalance[wearablesSubject][to] += amount;
 
         emit WearableTransferred(from, to, wearablesSubject, amount);
     }

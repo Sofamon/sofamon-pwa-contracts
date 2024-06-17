@@ -5,6 +5,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {IBlast} from "./IBlast.sol";
+import {IBlastPoints} from "./IBlastPoints.sol";
 
 // Errors
 error InvalidFeePercent();
@@ -22,15 +24,16 @@ error TotalSupplyExceeded();
 error InsufficientPayment();
 error ExcessivePayment();
 error SendFundsFailed();
+error RefundFailed();
 error InsufficientHoldings();
 error TransferToZeroAddress();
 error IncorrectSender();
 
 /**
- * @title SofamonWearables
+ * @title SofamonWearablesBlast
  * @author lixingyu.eth <@0xlxy>
  */
-contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
+contract SofamonWearablesBlast is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using ECDSA for bytes32;
 
     enum SaleStates {
@@ -61,6 +64,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
     // Address that signs messages used for creating wearables
     address public wearableOperator;
+
+    // Blast interface
+    IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
+    IBlastPoints public constant BLAST_POINTS = IBlastPoints(0x2fc95838c71e76ec69ff817983BFf17c710F34E0);
 
     event ProtocolFeeDestinationUpdated(address feeDestination);
 
@@ -129,10 +136,10 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
     // wearablesSubject => Wearable
     mapping(bytes32 => Wearable) public wearables;
 
-    // wearablesSubject => (holder => balance)
+    // wearablesSubject => (Holder => Balance)
     mapping(bytes32 => mapping(address => uint256)) public wearablesBalance;
 
-    // wearablesSubject => supply
+    // wearablesSubject => Supply
     mapping(bytes32 => uint256) public wearablesSupply;
 
     // userAddress => nonce
@@ -142,12 +149,27 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
         _disableInitializers();
     }
 
-    function initialize(address _wearableOperator, address _signer) public initializer {
+    function initialize(address _governor, address _pointsOperator, address _wearableOperator, address _signer)
+        public
+        initializer
+    {
         // Configure protocol settings
         protocolFeePercent = PROTOCOL_FEE_PERCENT;
         creatorFeePercent = CREATOR_FEE_PERCENT;
         wearableOperator = _wearableOperator;
         wearableSigner = _signer;
+
+        // Configure Blast automatic yield
+        BLAST.configureAutomaticYield();
+
+        // Configure Blast claimable gas fee
+        BLAST.configureClaimableGas();
+
+        // Configure Blast governor
+        BLAST.configureGovernor(_governor);
+
+        // Configure Blast Points governor
+        BLAST_POINTS.configurePointsOperator(_pointsOperator);
 
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
@@ -453,11 +475,6 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
             revert InsufficientPayment();
         }
 
-        // Check if user has excessive funds
-        if (msg.value > price + protocolFee + creatorFee) {
-            revert ExcessivePayment();
-        }
-
         // Update wearables balance and supply
         wearablesBalance[wearablesSubject][msg.sender] = wearablesBalance[wearablesSubject][msg.sender] + amount;
         wearablesSupply[wearablesSubject] = supply + amount;
@@ -477,6 +494,17 @@ contract SofamonWearables is Initializable, Ownable2StepUpgradeable, UUPSUpgrade
 
         // Check if all funds were sent successfully
         if (!(success1 && success2)) revert SendFundsFailed();
+
+        {
+            uint256 excessPayment = msg.value - price - protocolFee - creatorFee;
+            // Refund excess payment to user
+            if (excessPayment > 0) {
+                (bool success3,) = msg.sender.call{value: excessPayment}("");
+                if (!success3) {
+                    revert RefundFailed();
+                }
+            }
+        }
     }
 
     /// @dev Sells `amount` of `wearablesSubject`.

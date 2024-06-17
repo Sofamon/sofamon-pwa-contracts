@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "../src/SofamonWearables.sol";
+import "../src/SofamonWearablesV2.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -315,7 +315,7 @@ contract SofamonWearablesTest is Test {
         proxySofa.getBuyPriceAfterFee(wearablesSubject, 10 ether);
     }
 
-    function testExcessivePayments() public {
+    function testPaymentsRefund() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
@@ -337,9 +337,9 @@ contract SofamonWearablesTest is Test {
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
         uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
-        vm.expectRevert(bytes4(keccak256("ExcessivePayment()")));
         // buy 1 full share of the wearable with excessive payment
-        proxySofa.buyWearables{value: buyPriceAfterFee + 0.1 ether}(wearablesSubject, 1 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee + 0.5 ether}(wearablesSubject, 1 ether);
+        assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
     function testBuyPrivateWearablesFailed() public {

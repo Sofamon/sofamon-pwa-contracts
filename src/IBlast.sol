@@ -10,7 +10,4 @@ interface IBlast {
 
     // configure governor
     function configureGovernor(address _governor) external;
-
-    // configure governor on behalf
-    function configureGovernorOnBehalf(address _newGovernor, address contractAddress) external;
 }

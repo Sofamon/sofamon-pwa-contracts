@@ -97,20 +97,6 @@ contract SofamonWearablesBlastTest is Test {
         assertEq(proxySofav2.owner(), owner);
     }
 
-    function testSetBlastGovernor() public {
-        vm.startPrank(owner);
-        vm.expectEmit(true, true, true, true);
-        emit BlastGovernorUpdated(governor);
-        proxySofa.setBlastGovernor(governor);
-    }
-
-    function testSetBlastPointsOperator() public {
-        vm.startPrank(owner);
-        vm.expectEmit(true, true, true, true);
-        emit BlastPointsOperatorUpdated(operator2);
-        proxySofa.setBlastPointsOperator(operator2);
-    }
-
     function testSetProtocolFeeAndCreatorFee() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
@@ -344,7 +330,7 @@ contract SofamonWearablesBlastTest is Test {
         proxySofa.getBuyPriceAfterFee(wearablesSubject, 10 ether);
     }
 
-    function testExcessivePayments() public {
+    function testPaymentsRefund() public {
         bytes32 wearablesSubject = keccak256(abi.encode("test hoodie", "hoodie image url"));
 
         vm.startPrank(operator);
@@ -366,9 +352,9 @@ contract SofamonWearablesBlastTest is Test {
         vm.deal(user1, 1 ether);
         assertEq(user1.balance, 1 ether);
         uint256 buyPriceAfterFee = proxySofa.getBuyPriceAfterFee(wearablesSubject, 1 ether);
-        vm.expectRevert(bytes4(keccak256("ExcessivePayment()")));
         // buy 1 full share of the wearable with excessive payment
-        proxySofa.buyWearables{value: buyPriceAfterFee + 0.1 ether}(wearablesSubject, 1 ether);
+        proxySofa.buyWearables{value: buyPriceAfterFee + 0.5 ether}(wearablesSubject, 1 ether);
+        assertEq(user1.balance, 1 ether - buyPriceAfterFee);
     }
 
     function testBuyPrivateWearablesFailed() public {
